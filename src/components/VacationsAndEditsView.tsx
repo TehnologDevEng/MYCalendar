@@ -79,37 +79,37 @@ export const VacationsAndEditsView: React.FC<VacationsAndEditsViewProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       {/* Vacations manager */}
-      <section className="bg-white dark:bg-[#111927] rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-        <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <section className="bg-[#0E0E0F] rounded-xl border border-[#222226] overflow-hidden">
+        <div className="p-4 sm:p-5 border-b border-[#222226] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+            <h2 className="text-base font-semibold text-[#F7F8F8]">
               График отпусков (2027–2030)
             </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            <p className="text-xs text-[#8A8F98] mt-0.5">
               Отпускные даты автоматически перекрывают эталонный цикл и пересчитывают годовые часы
             </p>
           </div>
           <button
             type="button"
             onClick={onResetVacations}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors whitespace-nowrap shrink-0 self-start sm:self-auto cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 min-h-[38px] text-xs font-medium rounded-lg border border-[#2A2A30] bg-[#141416] text-[#C8CCD4] hover:text-[#F7F8F8] hover:border-[#3A3A42] transition-colors whitespace-nowrap shrink-0 self-start sm:self-auto cursor-pointer"
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            Вернуть отпуска 2027 по умолчанию
+            Вернуть отпуска 2027
           </button>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="p-4 sm:p-5 bg-slate-50/70 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-800"
+          className="p-4 sm:p-5 bg-[#121214] border-b border-[#222226]"
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-end">
             <div className="lg:col-span-4">
               <label
                 htmlFor="vac-title"
-                className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5"
+                className="block text-xs font-medium text-[#8A8F98] mb-1.5"
               >
                 Название периода
               </label>
@@ -119,14 +119,14 @@ export const VacationsAndEditsView: React.FC<VacationsAndEditsViewProps> = ({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Например: Отпуск летом 2028"
-                className="w-full h-10 px-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                className="w-full h-11 sm:h-10 px-3 rounded-lg border border-[#2A2A30] bg-[#0B0B0C] text-base sm:text-sm text-[#F7F8F8] placeholder:text-[#5C616B] focus:outline-none focus:border-[#00BCC5]"
               />
             </div>
 
             <div className="lg:col-span-3">
               <label
                 htmlFor="vac-start"
-                className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5"
+                className="block text-xs font-medium text-[#8A8F98] mb-1.5"
               >
                 Начало
               </label>
@@ -137,14 +137,14 @@ export const VacationsAndEditsView: React.FC<VacationsAndEditsViewProps> = ({
                 max="2030-12-31"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full h-10 px-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm font-mono tabular-nums text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                className="w-full h-11 sm:h-10 px-3 rounded-lg border border-[#2A2A30] bg-[#0B0B0C] text-sm font-mono tabular-nums text-[#F7F8F8] focus:outline-none focus:border-[#00BCC5]"
               />
             </div>
 
             <div className="lg:col-span-3">
               <label
                 htmlFor="vac-end"
-                className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5"
+                className="block text-xs font-medium text-[#8A8F98] mb-1.5"
               >
                 Окончание
               </label>
@@ -155,14 +155,14 @@ export const VacationsAndEditsView: React.FC<VacationsAndEditsViewProps> = ({
                 max="2030-12-31"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full h-10 px-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm font-mono tabular-nums text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                className="w-full h-11 sm:h-10 px-3 rounded-lg border border-[#2A2A30] bg-[#0B0B0C] text-sm font-mono tabular-nums text-[#F7F8F8] focus:outline-none focus:border-[#00BCC5]"
               />
             </div>
 
             <div className="lg:col-span-2">
               <button
                 type="submit"
-                className="w-full h-10 px-4 inline-flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors whitespace-nowrap cursor-pointer"
+                className="w-full h-11 sm:h-10 px-4 inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#00BCC5] hover:bg-[#19CBD3] text-black text-sm font-semibold transition-colors whitespace-nowrap cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 Добавить
@@ -171,30 +171,28 @@ export const VacationsAndEditsView: React.FC<VacationsAndEditsViewProps> = ({
           </div>
 
           {error && (
-            <p className="mt-2.5 text-xs font-medium text-rose-600 dark:text-rose-400">
-              {error}
-            </p>
+            <p className="mt-2.5 text-xs font-medium text-rose-400">{error}</p>
           )}
         </form>
 
         {sortedVacations.length === 0 ? (
-          <div className="p-8 text-center text-sm text-slate-500 dark:text-slate-400">
+          <div className="p-8 text-center text-sm text-[#8A8F98]">
             Отпуска не заданы. Добавьте даты выше, чтобы они отобразились на календаре.
           </div>
         ) : (
-          <div className="divide-y divide-slate-100 dark:divide-slate-800/80">
+          <div className="divide-y divide-[#1D1D21]">
             {sortedVacations.map((vac) => {
               const days = countDaysInclusive(vac.startDate, vac.endDate);
               return (
                 <div
                   key={vac.id}
-                  className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 dark:hover:bg-slate-800/30 transition-colors"
+                  className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[#1A1A1C] transition-colors"
                 >
                   <div>
-                    <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    <div className="text-sm font-semibold text-[#F7F8F8]">
                       {vac.title}
                     </div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-mono tabular-nums">
+                    <div className="text-xs text-[#8A8F98] mt-0.5 font-mono tabular-nums">
                       {formatNumericDate(vac.startDate)} — {formatNumericDate(vac.endDate)} ·{' '}
                       {days} {pluralizeDays(days)}
                     </div>
@@ -203,15 +201,15 @@ export const VacationsAndEditsView: React.FC<VacationsAndEditsViewProps> = ({
                     <button
                       type="button"
                       onClick={() => onJumpToDate(vac.startDate)}
-                      className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap cursor-pointer"
+                      className="text-xs font-medium text-[#00BCC5] hover:underline whitespace-nowrap cursor-pointer"
                     >
-                      Показать в календаре
+                      В календарь
                     </button>
                     <button
                       type="button"
                       onClick={() => onDeleteVacation(vac.id)}
                       aria-label={`Удалить ${vac.title}`}
-                      className="p-2 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                      className="min-h-[38px] min-w-[38px] flex items-center justify-center rounded-lg text-[#8A8F98] hover:text-rose-400 hover:bg-rose-950/50 transition-colors cursor-pointer"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -224,14 +222,14 @@ export const VacationsAndEditsView: React.FC<VacationsAndEditsViewProps> = ({
       </section>
 
       {/* Manual day overrides & personal notes */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <section className="bg-white dark:bg-[#111927] rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-          <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6">
+        <section className="bg-[#0E0E0F] rounded-xl border border-[#222226] overflow-hidden">
+          <div className="p-4 border-b border-[#222226] flex items-center justify-between gap-2">
             <div>
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+              <h3 className="text-sm font-semibold text-[#F7F8F8]">
                 Ручные правки смен ({overrideEntries.length})
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="text-xs text-[#8A8F98] mt-0.5">
                 Нажмите на любой день в календаре, чтобы изменить тип смены
               </p>
             </div>
@@ -239,7 +237,7 @@ export const VacationsAndEditsView: React.FC<VacationsAndEditsViewProps> = ({
               <button
                 type="button"
                 onClick={onClearAllOverrides}
-                className="text-xs font-medium text-rose-600 dark:text-rose-400 hover:underline whitespace-nowrap cursor-pointer"
+                className="text-xs font-medium text-rose-400 hover:underline whitespace-nowrap cursor-pointer"
               >
                 Сбросить все
               </button>
@@ -247,11 +245,11 @@ export const VacationsAndEditsView: React.FC<VacationsAndEditsViewProps> = ({
           </div>
 
           {overrideEntries.length === 0 ? (
-            <div className="p-6 text-sm text-slate-500 dark:text-slate-400">
+            <div className="p-6 text-sm text-[#8A8F98]">
               Ручных замен пока нет — календарь работает строго по эталонному графику.
             </div>
           ) : (
-            <div className="divide-y divide-slate-100 dark:divide-slate-800/80 max-h-80 overflow-y-auto">
+            <div className="divide-y divide-[#1D1D21] max-h-80 overflow-y-auto">
               {overrideEntries.map(([iso, code]) => (
                 <div
                   key={iso}
@@ -261,18 +259,18 @@ export const VacationsAndEditsView: React.FC<VacationsAndEditsViewProps> = ({
                     <button
                       type="button"
                       onClick={() => onJumpToDate(iso)}
-                      className="text-sm font-medium text-slate-900 dark:text-slate-100 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer"
+                      className="text-sm font-medium text-[#F7F8F8] hover:text-[#00BCC5] cursor-pointer"
                     >
                       {formatRuDate(iso, true)}
                     </button>
-                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                    <div className="text-xs text-[#8A8F98]">
                       Заменено на: {SHIFT_TYPES[code].label} ({SHIFT_TYPES[code].hours} ч)
                     </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => onRemoveOverride(iso)}
-                    className="text-xs font-medium text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer whitespace-nowrap"
+                    className="text-xs font-medium text-[#8A8F98] hover:text-rose-400 cursor-pointer whitespace-nowrap"
                   >
                     Вернуть
                   </button>
@@ -282,22 +280,22 @@ export const VacationsAndEditsView: React.FC<VacationsAndEditsViewProps> = ({
           )}
         </section>
 
-        <section className="bg-white dark:bg-[#111927] rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-          <div className="p-4 border-b border-slate-200 dark:border-slate-800">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+        <section className="bg-[#0E0E0F] rounded-xl border border-[#222226] overflow-hidden">
+          <div className="p-4 border-b border-[#222226]">
+            <h3 className="text-sm font-semibold text-[#F7F8F8]">
               Личные заметки к датам ({noteEntries.length})
             </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            <p className="text-xs text-[#8A8F98] mt-0.5">
               Билеты, медкомиссии, перевахтовки и напоминания
             </p>
           </div>
 
           {noteEntries.length === 0 ? (
-            <div className="p-6 text-sm text-slate-500 dark:text-slate-400">
+            <div className="p-6 text-sm text-[#8A8F98]">
               Заметок пока нет. Откройте любой день в календаре, чтобы оставить пометку.
             </div>
           ) : (
-            <div className="divide-y divide-slate-100 dark:divide-slate-800/80 max-h-80 overflow-y-auto">
+            <div className="divide-y divide-[#1D1D21] max-h-80 overflow-y-auto">
               {noteEntries.map(([iso, text]) => (
                 <div
                   key={iso}
@@ -307,11 +305,11 @@ export const VacationsAndEditsView: React.FC<VacationsAndEditsViewProps> = ({
                     <button
                       type="button"
                       onClick={() => onJumpToDate(iso)}
-                      className="text-xs font-mono tabular-nums font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                      className="text-xs font-mono tabular-nums font-semibold text-[#00BCC5] hover:underline cursor-pointer"
                     >
                       {formatRuDate(iso, true)}
                     </button>
-                    <p className="text-sm text-slate-700 dark:text-slate-300 mt-0.5 break-words">
+                    <p className="text-sm text-[#D2D6DC] mt-0.5 break-words">
                       {text}
                     </p>
                   </div>
@@ -319,7 +317,7 @@ export const VacationsAndEditsView: React.FC<VacationsAndEditsViewProps> = ({
                     type="button"
                     onClick={() => onDeleteNote(iso)}
                     aria-label="Удалить заметку"
-                    className="p-1.5 rounded-md text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer shrink-0"
+                    className="p-1.5 rounded-md text-[#8A8F98] hover:text-rose-400 cursor-pointer shrink-0"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

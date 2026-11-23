@@ -26,9 +26,9 @@ class ErrorBoundary extends React.Component<
 
   handleReset = () => {
     try {
-      localStorage.clear();
+      window.localStorage.clear();
     } catch {
-      // ignore storage errors in restricted browsers
+      // ignore storage errors
     }
     window.location.reload();
   };
@@ -36,14 +36,14 @@ class ErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center p-6 bg-[#f6f7f9] text-slate-900">
-          <div className="max-w-sm w-full bg-white border border-slate-200 rounded-2xl p-6 space-y-4">
+        <div className="min-h-screen flex items-center justify-center p-6 bg-black text-[#F7F8F8]">
+          <div className="max-w-sm w-full bg-[#0E0E0F] border border-[#222226] rounded-2xl p-6 space-y-4">
             <h1 className="text-lg font-bold">Не удалось загрузить календарь</h1>
-            <p className="text-sm text-slate-600">{this.state.message}</p>
+            <p className="text-sm text-[#8A8F98]">{this.state.message}</p>
             <button
               type="button"
               onClick={this.handleReset}
-              className="w-full h-11 rounded-xl bg-blue-600 text-white text-sm font-medium cursor-pointer"
+              className="w-full h-11 rounded-xl bg-[#00BCC5] text-black text-sm font-semibold cursor-pointer"
             >
               Сбросить данные и перезагрузить
             </button>

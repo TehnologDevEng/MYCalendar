@@ -95,7 +95,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[2px] flex items-end sm:items-center justify-center sm:p-4"
+      className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-end sm:items-center justify-center sm:p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -104,21 +104,21 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby="export-modal-title"
-        className="w-full sm:max-w-md max-h-[90dvh] flex flex-col bg-white dark:bg-[#111927] rounded-t-3xl sm:rounded-2xl border-t sm:border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden"
+        className="w-full sm:max-w-md max-h-[90dvh] flex flex-col bg-[#0E0E0F] rounded-t-3xl sm:rounded-2xl border-t sm:border border-[#26262C] shadow-2xl overflow-hidden"
       >
         <div className="sm:hidden pt-2.5 pb-1 flex justify-center shrink-0">
-          <div className="w-10 h-1 rounded-full bg-slate-300 dark:bg-slate-700" aria-hidden="true" />
+          <div className="w-10 h-1 rounded-full bg-[#33333A]" aria-hidden="true" />
         </div>
 
-        <div className="px-5 py-3.5 sm:py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 shrink-0">
+        <div className="px-5 py-3.5 sm:py-4 border-b border-[#222226] flex items-center justify-between gap-2 shrink-0">
           <div>
             <h3
               id="export-modal-title"
-              className="text-base font-bold text-slate-900 dark:text-slate-100"
+              className="text-base font-bold text-[#F7F8F8]"
             >
               Экспорт графика · {year}
             </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            <p className="text-xs text-[#8A8F98] mt-0.5">
               Для Google Календаря, Apple Calendar, Яндекс Календаря и Excel
             </p>
           </div>
@@ -126,7 +126,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             type="button"
             onClick={onClose}
             aria-label="Закрыть"
-            className="min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            className="min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] flex items-center justify-center rounded-lg text-[#8A8F98] hover:text-[#F7F8F8] hover:bg-[#1A1A1C] transition-colors cursor-pointer"
           >
             <X className="w-5 h-5 sm:w-4 sm:h-4" />
           </button>
@@ -135,11 +135,11 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         <div className="p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:pb-5 space-y-5 overflow-y-auto flex-1">
           {/* ICS export */}
           <div>
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100 mb-2">
-              <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <div className="flex items-center gap-2 text-sm font-semibold text-[#F7F8F8] mb-2">
+              <Calendar className="w-4 h-4 text-[#00BCC5]" />
               Файл календаря (.ics)
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+            <p className="text-xs text-[#8A8F98] mb-3">
               Выберите типы дней, которые нужно добавить событиями в календарь телефона:
             </p>
             <div className="space-y-1.5 mb-3.5">
@@ -148,18 +148,18 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                 return (
                   <label
                     key={code}
-                    className="flex items-center justify-between gap-2 px-3 min-h-[44px] rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer text-sm"
+                    className="flex items-center justify-between gap-2 px-3 min-h-[44px] rounded-lg border border-[#222226] bg-[#141416] hover:border-[#33333A] cursor-pointer text-sm"
                   >
-                    <span className="flex items-center gap-2.5 text-slate-800 dark:text-slate-200">
+                    <span className="flex items-center gap-2.5 text-[#F7F8F8]">
                       <input
                         type="checkbox"
                         checked={includeTypes[code]}
                         onChange={() => toggleType(code)}
-                        className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-600"
+                        className="w-4 h-4 rounded accent-[#00BCC5]"
                       />
                       <span>{meta.label}</span>
                     </span>
-                    <span className="font-mono text-xs text-slate-500 dark:text-slate-400">
+                    <span className="font-mono text-xs text-[#8A8F98]">
                       {meta.hours > 0 ? `${meta.hours} ч` : '0 ч'}
                     </span>
                   </label>
@@ -170,7 +170,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               type="button"
               disabled={!anySelected}
               onClick={handleDownloadIcs}
-              className="w-full min-h-[44px] py-2.5 px-4 inline-flex items-center justify-center gap-2 rounded-xl sm:rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-45 text-white text-sm font-medium transition-colors cursor-pointer"
+              className="w-full min-h-[44px] py-2.5 px-4 inline-flex items-center justify-center gap-2 rounded-xl sm:rounded-lg bg-[#00BCC5] hover:bg-[#19CBD3] disabled:opacity-45 text-black text-sm font-semibold transition-colors cursor-pointer"
             >
               <Download className="w-4 h-4" />
               Скачать vakhta_{year}.ics
@@ -178,44 +178,44 @@ export const ExportModal: React.FC<ExportModalProps> = ({
           </div>
 
           {/* CSV & Print */}
-          <div className="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-2">
-            <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">
+          <div className="pt-4 border-t border-[#222226] space-y-2">
+            <div className="text-xs font-semibold text-[#8A8F98] mb-2">
               Таблицы и печать
             </div>
             <button
               type="button"
               onClick={handleDownloadMonthlyCsv}
-              className="w-full min-h-[44px] py-2 px-3.5 inline-flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 transition-colors cursor-pointer"
+              className="w-full min-h-[44px] py-2 px-3.5 inline-flex items-center justify-between rounded-lg border border-[#222226] bg-[#141416] hover:border-[#33333A] text-sm text-[#F7F8F8] transition-colors cursor-pointer"
             >
               <span className="inline-flex items-center gap-2">
-                <FileSpreadsheet className="w-4 h-4 text-slate-500" />
+                <FileSpreadsheet className="w-4 h-4 text-[#8A8F98]" />
                 Помесячная сводка часов (CSV)
               </span>
-              <span className="text-xs font-mono text-slate-400">Excel</span>
+              <span className="text-xs font-mono text-[#666]">Excel</span>
             </button>
 
             <button
               type="button"
               onClick={handleDownloadDailyCsv}
-              className="w-full min-h-[44px] py-2 px-3.5 inline-flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 transition-colors cursor-pointer"
+              className="w-full min-h-[44px] py-2 px-3.5 inline-flex items-center justify-between rounded-lg border border-[#222226] bg-[#141416] hover:border-[#33333A] text-sm text-[#F7F8F8] transition-colors cursor-pointer"
             >
               <span className="inline-flex items-center gap-2">
-                <FileSpreadsheet className="w-4 h-4 text-slate-500" />
+                <FileSpreadsheet className="w-4 h-4 text-[#8A8F98]" />
                 Посуточный табель с заметками (CSV)
               </span>
-              <span className="text-xs font-mono text-slate-400">365 дн.</span>
+              <span className="text-xs font-mono text-[#666]">365 дн.</span>
             </button>
 
             <button
               type="button"
               onClick={handlePrint}
-              className="w-full min-h-[44px] py-2 px-3.5 inline-flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 transition-colors cursor-pointer"
+              className="w-full min-h-[44px] py-2 px-3.5 inline-flex items-center justify-between rounded-lg border border-[#222226] bg-[#141416] hover:border-[#33333A] text-sm text-[#F7F8F8] transition-colors cursor-pointer"
             >
               <span className="inline-flex items-center gap-2">
-                <Printer className="w-4 h-4 text-slate-500" />
+                <Printer className="w-4 h-4 text-[#8A8F98]" />
                 Распечатать календарь / PDF
               </span>
-              <span className="text-xs font-mono text-slate-400">A4</span>
+              <span className="text-xs font-mono text-[#666]">A4</span>
             </button>
           </div>
         </div>

@@ -1,40 +1,39 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ru" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
-    <title>Календарь вахты 2027–2030 · Носар Андрей</title>
+    <title>MYCalendar · Календарь вахты 2027–2030</title>
     <meta
       name="description"
-      content="Интерактивный график вахтовых смен, перевахтовок, отпусков и учёта рабочего времени на 2027–2030 годы."
+      content="Минималистичный календарь вахтовых смен, перевахтовок и отпусков на 2027–2030 годы (Носар А.И.)."
     />
-    <meta name="theme-color" content="#f6f7f9" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0b111d" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#0E0E10" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="Вахта 27–30" />
-    <meta property="og:title" content="Календарь вахты 2027–2030 · Носар Андрей" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="MYCalendar" />
+    <meta property="og:title" content="MYCalendar · Календарь вахты 2027–2030" />
     <meta
       property="og:description"
-      content="Интерактивный график вахтовых смен, перевахтовок, отпусков и учёта рабочего времени на 2027–2030 годы."
+      content="Минималистичный календарь вахтовых смен, перевахтовок и отпусков на 2027–2030 годы."
     />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700&family=Marck+Script&display=swap"
       rel="stylesheet"
     />
   </head>
-  <body class="bg-[#f6f7f9] text-slate-900 antialiased dark:bg-[#0b111d] dark:text-slate-100">
+  <body class="bg-black text-[#F7F8F8] antialiased selection:bg-[#00BCC5]/30">
     <div id="root"></div>
     <noscript>
-      <div style="padding:24px;font-family:sans-serif;text-align:center;">
-        Для работы календаря вахты необходимо включить JavaScript в браузере.
+      <div style="padding:24px;font-family:sans-serif;text-align:center;color:#F7F8F8;background:#000;">
+        Для работы MYCalendar необходимо включить JavaScript в браузере.
       </div>
     </noscript>
     <script type="module" src="/src/main.tsx"></script>

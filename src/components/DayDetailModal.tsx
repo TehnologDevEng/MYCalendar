@@ -76,7 +76,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[2px] flex items-end sm:items-center justify-center sm:p-4"
+      className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-end sm:items-center justify-center sm:p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           handleNoteBlur();
@@ -88,25 +88,25 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby="day-modal-title"
-        className="w-full sm:max-w-md max-h-[90dvh] flex flex-col bg-white dark:bg-[#111927] rounded-t-3xl sm:rounded-2xl border-t sm:border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden"
+        className="w-full sm:max-w-md max-h-[90dvh] flex flex-col bg-[#0E0E0F] rounded-t-3xl sm:rounded-2xl border-t sm:border border-[#26262C] shadow-2xl overflow-hidden"
       >
         {/* Mobile sheet drag handle */}
         <div className="sm:hidden pt-2.5 pb-1 flex justify-center shrink-0">
-          <div className="w-10 h-1 rounded-full bg-slate-300 dark:bg-slate-700" aria-hidden="true" />
+          <div className="w-10 h-1 rounded-full bg-[#33333A]" aria-hidden="true" />
         </div>
 
         {/* Header */}
-        <div className="px-5 py-3.5 sm:py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 shrink-0">
+        <div className="px-5 py-3.5 sm:py-4 border-b border-[#222226] flex items-center justify-between gap-2 shrink-0">
           <div className="min-w-0">
             <h3
               id="day-modal-title"
-              className="text-lg font-bold text-slate-900 dark:text-slate-100 leading-tight truncate"
+              className="text-lg font-bold text-[#F7F8F8] leading-tight truncate"
             >
               {day} {MONTHS_GEN[month]} {year}
             </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            <p className="text-xs text-[#8A8F98] mt-0.5">
               {dowLabel} · код в табеле:{' '}
-              <span className="font-mono font-semibold">{shiftMeta.shortCode}</span>
+              <span className="font-mono font-semibold text-[#F7F8F8]">{shiftMeta.shortCode}</span>
             </p>
           </div>
 
@@ -118,7 +118,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                 onNavigateDay(-1);
               }}
               aria-label="Предыдущий день"
-              className="min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] flex items-center justify-center rounded-lg text-[#8A8F98] hover:text-[#F7F8F8] hover:bg-[#1A1A1C] transition-colors cursor-pointer"
             >
               <ChevronLeft className="w-5 h-5 sm:w-4 sm:h-4" />
             </button>
@@ -129,7 +129,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                 onNavigateDay(1);
               }}
               aria-label="Следующий день"
-              className="min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] flex items-center justify-center rounded-lg text-[#8A8F98] hover:text-[#F7F8F8] hover:bg-[#1A1A1C] transition-colors cursor-pointer"
             >
               <ChevronRight className="w-5 h-5 sm:w-4 sm:h-4" />
             </button>
@@ -140,7 +140,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                 onClose();
               }}
               aria-label="Закрыть"
-              className="min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] flex items-center justify-center rounded-lg text-[#8A8F98] hover:text-[#F7F8F8] hover:bg-[#1A1A1C] transition-colors cursor-pointer"
             >
               <X className="w-5 h-5 sm:w-4 sm:h-4" />
             </button>
@@ -161,24 +161,24 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
           </div>
 
           {/* Continuous cycle context */}
-          <div className="border-t border-b border-slate-100 dark:border-slate-800/90 py-3.5 text-sm space-y-1.5">
+          <div className="border-t border-b border-[#1D1D21] py-3.5 text-sm space-y-1.5">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-slate-500 dark:text-slate-400">{blockTitle}</span>
-              <span className="font-mono tabular-nums font-semibold text-slate-900 dark:text-slate-100">
+              <span className="text-[#8A8F98]">{blockTitle}</span>
+              <span className="font-mono tabular-nums font-semibold text-[#F7F8F8]">
                 День {blockContext.dayInBlock} из {blockContext.totalDaysInBlock}
               </span>
             </div>
-            <div className="flex items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
+            <div className="flex items-center justify-between gap-2 text-xs text-[#8A8F98]">
               <span>Период блока</span>
-              <span className="font-mono tabular-nums">
+              <span className="font-mono tabular-nums text-[#C8CCD4]">
                 {formatRuDate(blockContext.startDate)} — {formatRuDate(blockContext.endDate)} (
                 {blockContext.totalDaysInBlock} {pluralizeDays(blockContext.totalDaysInBlock)})
               </span>
             </div>
             {blockContext.blockHours > 0 && (
-              <div className="flex items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
+              <div className="flex items-center justify-between gap-2 text-xs text-[#8A8F98]">
                 <span>Часов за эту вахту</span>
-                <span className="font-mono tabular-nums font-medium text-slate-700 dark:text-slate-300">
+                <span className="font-mono tabular-nums font-medium text-[#00BCC5]">
                   {blockContext.blockHours} ч
                 </span>
               </div>
@@ -188,14 +188,14 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
           {/* Manual override */}
           <div>
             <div className="flex items-center justify-between gap-2 mb-2">
-              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+              <span className="text-xs font-semibold text-[#C8CCD4]">
                 Изменить статус дня вручную
               </span>
               {isOverridden && (
                 <button
                   type="button"
                   onClick={() => onResetOverride(isoDate)}
-                  className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                  className="inline-flex items-center gap-1 text-xs font-medium text-[#00BCC5] hover:underline cursor-pointer"
                 >
                   <RotateCcw className="w-3 h-3" />
                   По графику ({SHIFT_TYPES[baseCode].shortLabel})
@@ -223,8 +223,8 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                       st.cell
                     } ${
                       isSelected
-                        ? 'ring-2 ring-blue-600 dark:ring-blue-400 font-bold'
-                        : 'opacity-75 hover:opacity-100'
+                        ? 'ring-2 ring-[#00BCC5] border-[#00BCC5] font-bold'
+                        : 'opacity-70 hover:opacity-100'
                     }`}
                   >
                     <div className="font-mono text-xs font-bold leading-none">{m.shortCode}</div>
@@ -239,7 +239,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
           <div>
             <label
               htmlFor="day-note-input"
-              className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5"
+              className="block text-xs font-semibold text-[#C8CCD4] mb-1.5"
             >
               Заметка к этой дате
             </label>
@@ -250,20 +250,20 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
               onChange={(e) => setDraftNote(e.target.value)}
               onBlur={handleNoteBlur}
               placeholder="Билеты, поезд, перевахтовка, медосмотр..."
-              className="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-base sm:text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 resize-none"
+              className="w-full px-3 py-2.5 rounded-lg border border-[#2A2A30] bg-[#141416] text-base sm:text-sm text-[#F7F8F8] placeholder:text-[#5C616B] focus:outline-none focus:border-[#00BCC5] resize-none"
             />
           </div>
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3.5 pb-[calc(0.875rem+env(safe-area-inset-bottom))] sm:pb-3.5 bg-slate-50/80 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-800 shrink-0">
+        <div className="px-5 py-3.5 pb-[calc(0.875rem+env(safe-area-inset-bottom))] sm:pb-3.5 bg-[#121214] border-t border-[#222226] shrink-0">
           <button
             type="button"
             onClick={() => {
               handleNoteBlur();
               onClose();
             }}
-            className="w-full sm:w-auto sm:ml-auto sm:flex px-5 min-h-[44px] sm:min-h-[38px] items-center justify-center rounded-xl sm:rounded-lg bg-slate-900 dark:bg-blue-600 hover:bg-slate-800 dark:hover:bg-blue-700 text-white text-sm font-medium transition-colors cursor-pointer"
+            className="w-full sm:w-auto sm:ml-auto sm:flex px-5 min-h-[44px] sm:min-h-[38px] items-center justify-center rounded-xl sm:rounded-lg bg-[#00BCC5] hover:bg-[#19CBD3] text-black text-sm font-semibold transition-colors cursor-pointer"
           >
             Готово
           </button>

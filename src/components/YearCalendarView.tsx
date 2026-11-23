@@ -47,13 +47,13 @@ export const YearCalendarView: React.FC<YearCalendarViewProps> = ({
     <div className="space-y-3 sm:space-y-4">
       {/* Quick horizontal month jumper for phones */}
       <div className="md:hidden -mx-3 px-3 overflow-x-auto no-print">
-        <div className="inline-flex items-center gap-1 py-0.5">
+        <div className="inline-flex items-center gap-1.5 py-0.5">
           {MONTHS_SHORT.map((shortName, mIdx) => (
             <button
               key={shortName}
               type="button"
               onClick={() => scrollToMonth(mIdx)}
-              className="min-h-[38px] px-3 rounded-lg bg-white dark:bg-[#111927] border border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-700 dark:text-slate-300 active:bg-blue-600 active:text-white active:border-blue-600 capitalize whitespace-nowrap shrink-0 cursor-pointer"
+              className="min-h-[38px] px-3 rounded-lg bg-[#0E0E0F] border border-[#222226] text-xs font-medium text-[#8A8F98] active:bg-[#00BCC5] active:text-black active:border-[#00BCC5] capitalize whitespace-nowrap shrink-0 cursor-pointer transition-colors"
             >
               {shortName}
             </button>
@@ -81,17 +81,17 @@ export const YearCalendarView: React.FC<YearCalendarViewProps> = ({
             <section
               key={`${year}-${monthIndex}`}
               id={`month-card-${monthIndex}`}
-              className={`scroll-mt-16 bg-white dark:bg-[#111927] rounded-xl border p-3 sm:p-4 transition-colors ${
+              className={`scroll-mt-16 bg-[#0E0E0F] rounded-xl border p-3 sm:p-4 transition-colors ${
                 isFocusedMonth
-                  ? 'border-blue-500 dark:border-blue-400 ring-2 ring-blue-500/20'
-                  : 'border-slate-200 dark:border-slate-800'
+                  ? 'border-[#00BCC5] ring-1 ring-[#00BCC5]/40'
+                  : 'border-[#222226] hover:border-[#2E2E34]'
               }`}
             >
-              <div className="flex items-baseline justify-between gap-2 mb-2.5 sm:mb-3 pb-2 border-b border-slate-100 dark:border-slate-800/80">
-                <h2 className="text-[15px] font-semibold text-slate-900 dark:text-slate-100">
+              <div className="flex items-baseline justify-between gap-2 mb-2.5 sm:mb-3 pb-2.5 border-b border-[#1D1D21]">
+                <h2 className="text-[15px] font-semibold text-[#F7F8F8]">
                   {monthName}
                 </h2>
-                <div className="text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                <div className="text-xs font-mono tabular-nums text-[#8A8F98] whitespace-nowrap">
                   {monthHours} ч · {monthWorkDays} смен
                 </div>
               </div>
@@ -101,9 +101,7 @@ export const YearCalendarView: React.FC<YearCalendarViewProps> = ({
                   <div
                     key={dow}
                     className={`text-center text-[11px] font-medium py-1 ${
-                      idx >= 5
-                        ? 'text-slate-400 dark:text-slate-500'
-                        : 'text-slate-500 dark:text-slate-400'
+                      idx >= 5 ? 'text-[#5C616B]' : 'text-[#8A8F98]'
                     }`}
                   >
                     {dow}
@@ -133,13 +131,13 @@ export const YearCalendarView: React.FC<YearCalendarViewProps> = ({
                       type="button"
                       onClick={() => onSelectDay(iso)}
                       title={`${day} ${monthName} ${year} · ${meta.label}${meta.hours ? ` (${meta.hours} ч)` : ''}${hasNote ? ` · ${notes[iso]}` : ''}`}
-                      className={`relative aspect-square min-h-[40px] sm:min-h-0 rounded-lg border flex flex-col items-center justify-center transition-all duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 select-none cursor-pointer ${
+                      className={`relative aspect-square min-h-[40px] sm:min-h-0 rounded-lg border flex flex-col items-center justify-center transition-all duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00BCC5] select-none cursor-pointer ${
                         style.cell
                       } ${
-                        isDimmed ? 'opacity-20 grayscale-[45%]' : 'opacity-100'
+                        isDimmed ? 'opacity-20 grayscale-[55%]' : 'opacity-100'
                       } ${
                         isSelected
-                          ? 'ring-2 ring-blue-600 dark:ring-blue-400 z-10 font-bold'
+                          ? 'ring-2 ring-[#00BCC5] border-[#00BCC5] z-10 font-bold'
                           : ''
                       }`}
                     >
@@ -157,10 +155,10 @@ export const YearCalendarView: React.FC<YearCalendarViewProps> = ({
                           aria-hidden="true"
                         >
                           {hasOverride && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-blue-400" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#00BCC5]" />
                           )}
                           {hasNote && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-slate-700 dark:bg-slate-200" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#F7F8F8]" />
                           )}
                         </span>
                       )}
