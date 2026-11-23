@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Календарь вахты 2027–2030 · Носар Андрей</title>
+<style>
+  :root {
+    --bg: #f5f7fa; --card: #ffffff; --text: #1f2937; --muted: #6b7280;
+    --border: #e5e7eb; --accent: #2563eb;
+    --v: #d1fae5; --v-border: #10b981; --v-text: #065f46;
+    --d: #ffedd5; --d-border: #f97316; --d-text: #9a3412;
+    --y: #fef3c7; --y-border: #f59e0b; --y-text: #92400e;
+    --n: #e0e7ff; --n-border: #6366f1; --n-text: #3730a3;
+    --o: #fce7f3; --o-border: #ec4899; --o-text: #9d174d;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    padding: 24px 16px 60px; line-height: 1.4;
+  }
+  .container { max-width: 1200px; margin: 0 auto; }
+  header { text-align: center; margin-bottom: 20px; }
+  h1 { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+  .subtitle { color: var(--muted); font-size: 14px; }
+
+  .year-tabs {
+    display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .year-tab {
+    background: var(--card); border: 2px solid var(--border);
+    padding: 8px 22px; border-radius: 10px; font-size: 15px;
+    font-weight: 600; cursor: pointer; color: var(--text);
+    transition: all 0.15s;
+  }
+  .year-tab:hover { border-color: var(--accent); }
+  .year-tab.active {
+    background: var(--accent); color: white; border-color: var(--accent);
+  }
+
+  .stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px; margin-bottom: 20px;
+  }
+  .stat {
+    background: var(--card); border-radius: 12px; padding: 12px 14px;
+    border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .stat .label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; }
+  .stat .value { font-size: 22px; font-weight: 700; margin-top: 4px; }
+  .stat .sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .stat.v .value { color: var(--v-text); }
+  .stat.d .value { color: var(--d-text); }
+  .stat.y .value { color: var(--y-text); }
+  .stat.n .value { color: var(--n-text); }
+  .stat.o .value { color: var(--o-text); }
+  .stat.total .value { color: var(--accent); }
+
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 12px; justify-content: center;
+    margin-bottom: 20px; font-size: 13px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-dot {
+    width: 18px; height: 18px; border-radius: 5px; border: 2px solid;
+  }
+  .legend-dot.v { background: var(--v); border-color: var(--v-border); }
+  .legend-dot.d { background: var(--d); border-color: var(--d-border); }
+  .legend-dot.y { background: var(--y); border-color: var(--y-border); }
+  .legend-dot.n { background: var(--n); border-color: var(--n-border); }
+  .legend-dot.o { background: var(--o); border-color: var(--o-border); }
+
+  .months {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  .month {
+    background: var(--card); border-radius: 14px; padding: 14px;
+    border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .month h2 {
+    font-size: 15px; font-weight: 600; margin-bottom: 10px;
+    text-align: center;
+  }
+  .grid {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px;
+  }
+  .dow {
+    text-align: center; font-size: 10px; color: var(--muted);
+    font-weight: 600; padding: 4px 0;
+  }
+  .day {
+    aspect-ratio: 1; border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 500;
+    border: 1.5px solid transparent;
+    cursor: pointer; transition: transform 0.1s, box-shadow 0.1s;
+    user-select: none; position: relative;
+  }
+  .day:hover { transform: scale(1.1); box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 2; }
+  .day.empty { cursor: default; background: transparent; border-color: transparent; }
+  .day.empty:hover { transform: none; box-shadow: none; }
+  .day.v { background: var(--v); border-color: var(--v-border); color: var(--v-text); }
+  .day.d { background: var(--d); border-color: var(--d-border); color: var(--d-text); }
+  .day.y { background: var(--y); border-color: var(--y-border); color: var(--y-text); }
+  .day.n { background: var(--n); border-color: var(--n-border); color: var(--n-text); }
+  .day.o { background: var(--o); border-color: var(--o-border); color: var(--o-text); }
+
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(15,23,42,0.5);
+    display: none; align-items: center; justify-content: center;
+    z-index: 100; padding: 16px;
+    backdrop-filter: blur(2px);
+  }
+  .modal-backdrop.active { display: flex; }
+  .modal {
+    background: var(--card); border-radius: 16px; padding: 24px;
+    max-width: 360px; width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    animation: pop 0.15s ease-out;
+  }
+  @keyframes pop {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .modal h3 { font-size: 20px; margin-bottom: 12px; }
+  .modal .badge {
+    display: inline-block; padding: 6px 14px; border-radius: 999px;
+    font-size: 13px; font-weight: 600; margin-bottom: 14px; border: 2px solid;
+  }
+  .modal .badge.v { background: var(--v); border-color: var(--v-border); color: var(--v-text); }
+  .modal .badge.d { background: var(--d); border-color: var(--d-border); color: var(--d-text); }
+  .modal .badge.y { background: var(--y); border-color: var(--y-border); color: var(--y-text); }
+  .modal .badge.n { background: var(--n); border-color: var(--n-border); color: var(--n-text); }
+  .modal .badge.o { background: var(--o); border-color: var(--o-border); color: var(--o-text); }
+  .modal .detail { color: var(--muted); font-size: 14px; margin-bottom: 8px; }
+  .modal .hours { font-size: 14px; color: var(--text); margin-bottom: 18px; font-weight: 600; }
+  .modal button {
+    background: var(--accent); color: white; border: none;
+    padding: 10px 20px; border-radius: 10px; font-size: 14px;
+    font-weight: 600; cursor: pointer; width: 100%;
+  }
+  .modal button:hover { background: #1d4ed8; }
+
+  .note {
+    text-align: center; margin-top: 24px; font-size: 12px;
+    color: var(--muted); line-height: 1.6;
+  }
+  .note strong { color: var(--text); }
+
+  @media (max-width: 500px) {
+    h1 { font-size: 20px; }
+    .months { grid-template-columns: 1fr; }
+    .day { font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Календарь вахты 2027–2030</h1>
+    <div class="subtitle">Носар Андрей Иосифович · Ведущий инженер-технолог · Цех проката УЭЦН №1</div>
+  </header>
+
+  <div class="year-tabs" id="yearTabs"></div>
+  <div class="stats" id="stats"></div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot v"></div>Выходной / отдыхающая вахта</div>
+    <div class="legend-item"><div class="legend-dot d"></div>Дорога (8 ч)</div>
+    <div class="legend-item"><div class="legend-dot y"></div>Дневная (11 ч)</div>
+    <div class="legend-item"><div class="legend-dot n"></div>Ночная (11 ч)</div>
+    <div class="legend-item"><div class="legend-dot o"></div>Отпуск</div>
+  </div>
+
+  <div class="months" id="months"></div>
+  <div class="note" id="note"></div>
+</div>
+
+<div class="modal-backdrop" id="modal">
+  <div class="modal">
+    <h3 id="modal-title">—</h3>
+    <div class="badge" id="modal-badge">—</div>
+    <div class="detail" id="modal-detail">—</div>
+    <div class="hours" id="modal-hours">—</div>
+    <button onclick="closeModal()">Закрыть</button>
+  </div>
+</div>
+
+<script>
+const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const MONTHS_GEN = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+const DOW = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+const YEARS = [2027, 2028, 2029, 2030];
+
+// Эталонный паттерн смен из графика 2027 (для Носар А.И.)
+const TEMPLATE = {
+  0:  {1:'v',2:'v',3:'v',4:'v',5:'v',6:'v',7:'v',8:'v',9:'v',10:'v',11:'v',12:'v',13:'v',14:'v',15:'v',
+       16:'d',17:'y',18:'y',19:'y',20:'y',21:'y',22:'y',23:'y',
+       24:'n',25:'n',26:'n',27:'n',28:'n',29:'n',30:'n',31:'n'},
+  1:  {1:'y',2:'y',3:'y',4:'y',5:'y',6:'y',7:'y',
+       8:'n',9:'n',10:'n',11:'n',12:'n',13:'n',14:'n',
+       15:'d',16:'v',17:'v',18:'v',19:'v',20:'v',21:'v',22:'v',23:'v',24:'v',25:'v',26:'v',27:'v',28:'v'},
+  2:  {1:'y',2:'y',3:'y',4:'y',5:'y',6:'y',7:'y',8:'y',
+       9:'n',10:'n',11:'n',12:'n',13:'n',14:'n',15:'n',16:'n',
+       17:'d',18:'v',19:'v',20:'v',21:'v',22:'v',23:'v',24:'v',25:'v',26:'v',27:'v',28:'v',29:'v',30:'v',31:'v'},
+  3:  {1:'y',2:'y',3:'y',4:'y',5:'y',6:'y',7:'y',8:'y',
+       9:'n',10:'n',11:'n',12:'n',13:'n',14:'n',15:'n',16:'n',
+       17:'d',18:'v',19:'v',20:'v',21:'v',22:'v',23:'v',24:'v',25:'v',26:'v',27:'v',28:'v',29:'v',30:'v'},
+  4:  {1:'v',2:'v',3:'v',4:'v',5:'v',6:'v',7:'v',8:'v',9:'v',10:'v',11:'v',12:'v',13:'v',14:'v',15:'v',
+       16:'d',17:'y',18:'y',19:'y',20:'y',21:'y',22:'y',23:'y',
+       24:'n',25:'n',26:'n',27:'n',28:'n',29:'n',30:'n',31:'n'},
+  5:  {1:'y',2:'y',3:'y',4:'y',5:'y',6:'y',7:'y',8:'y',
+       9:'n',10:'n',11:'n',12:'n',13:'n',14:'n',15:'n',16:'n',
+       17:'d',18:'v',19:'v',20:'v',21:'v',22:'v',23:'v',24:'v',25:'v',26:'v',27:'v',28:'v',29:'v',30:'v'},
+  6:  {1:'v',2:'v',3:'v',4:'v',5:'v',6:'v',7:'v',8:'v',9:'v',10:'v',11:'v',12:'v',13:'v',14:'v',15:'v',
+       16:'d',17:'y',18:'y',19:'y',20:'y',21:'y',22:'y',23:'y',
+       24:'n',25:'n',26:'n',27:'n',28:'n',29:'n',30:'n',31:'n'},
+  7:  {1:'y',2:'y',3:'y',4:'y',5:'y',6:'y',7:'y',8:'y',
+       9:'n',10:'n',11:'n',12:'n',13:'n',14:'n',15:'n',16:'n',
+       17:'d',18:'v',19:'v',20:'v',21:'v',22:'v',23:'v',24:'v',25:'v',26:'v',27:'v',28:'v',29:'v',30:'v',31:'v'},
+  8:  {1:'y',2:'y',3:'y',4:'y',5:'y',6:'y',7:'y',8:'y',
+       9:'n',10:'n',11:'n',12:'n',13:'n',14:'n',
+       15:'v',16:'v',17:'v',18:'v',19:'v',20:'v',21:'v',22:'v',23:'v',24:'v',25:'v',26:'v',27:'v',28:'v',29:'v',30:'v'},
+  9:  {1:'v',2:'v',3:'v',4:'v',5:'v',6:'v',7:'v',8:'v',9:'v',10:'v',11:'v',12:'v',13:'v',14:'v',15:'v',
+       16:'d',17:'y',18:'y',19:'y',20:'y',21:'y',22:'y',23:'y',
+       24:'n',25:'n',26:'n',27:'n',28:'n',29:'n',30:'n',31:'n'},
+  10: {1:'y',2:'y',3:'y',4:'y',5:'y',6:'y',7:'y',8:'y',
+       9:'n',10:'n',11:'n',12:'n',13:'n',14:'n',15:'n',16:'n',
+       17:'d',18:'v',19:'v',20:'v',21:'v',22:'v',23:'v',24:'v',25:'v',26:'v',27:'v',28:'v',29:'v',30:'v'},
+  11: {1:'v',2:'v',3:'v',4:'v',5:'v',6:'v',7:'v',8:'v',9:'v',10:'v',11:'v',12:'v',13:'v',14:'v',15:'v',
+       16:'d',17:'y',18:'y',19:'y',20:'y',21:'y',22:'y',23:'y',
+       24:'n',25:'n',26:'n',27:'n',28:'n',29:'n',30:'n',31:'n'}
+};
+
+const TYPES = {
+  v: { label: 'Выходной / отдыхающая вахта', desc: 'Нерабочий день', hours: 0 },
+  d: { label: 'Дорога',        desc: 'Время в пути',                   hours: 8 },
+  y: { label: 'Дневная смена', desc: 'Работа в дневное время',         hours: 11 },
+  n: { label: 'Ночная смена',  desc: 'Работа в ночное время',          hours: 11 },
+  o: { label: 'Отпуск',        desc: 'Ежегодный оплачиваемый отпуск',  hours: 0 }
+};
+
+// Отпуска
+const VACATIONS = [
+  { year: 2027, from: [5, 18], to: [6, 11] },  // 18 июня – 11 июля (24 дня)
+  { year: 2027, from: [8, 20], to: [9, 13] }   // 20 сентября – 13 октября (24 дня)
+];
+
+let currentYear = 2027;
+
+function inVacation(year, month, day) {
+  const t = new Date(year, month, day).getTime();
+  for (const v of VACATIONS) {
+    if (v.year !== year) continue;
+    const from = new Date(year, v.from[0], v.from[1]).getTime();
+    const to   = new Date(year, v.to[0],   v.to[1]).getTime();
+    if (t >= from && t <= to) return true;
+  }
+  return false;
+}
+
+function getSchedule(year, month) {
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const res = {};
+  for (let d = 1; d <= daysInMonth; d++) {
+    res[d] = TEMPLATE[month][d] || 'v';
+    if (inVacation(year, month, d)) res[d] = 'o';
+  }
+  return res;
+}
+
+function renderYearTabs() {
+  const c = document.getElementById('yearTabs');
+  c.innerHTML = '';
+  YEARS.forEach(y => {
+    const btn = document.createElement('button');
+    btn.className = 'year-tab' + (y === currentYear ? ' active' : '');
+    btn.textContent = y;
+    btn.onclick = () => { currentYear = y; renderAll(); };
+    c.appendChild(btn);
+  });
+}
+
+function renderStats(scheduleByMonth) {
+  const totals = { v:0, d:0, y:0, n:0, o:0 };
+  let totalHours = 0;
+  let workDays = 0;
+
+  for (let m = 0; m < 12; m++) {
+    for (const d in scheduleByMonth[m]) {
+      const t = scheduleByMonth[m][d];
+      totals[t]++;
+      totalHours += TYPES[t].hours;
+      if (t === 'y' || t === 'n' || t === 'd') workDays++;
+    }
+  }
+
+  const statsEl = document.getElementById('stats');
+  statsEl.innerHTML = `
+    <div class="stat v"><div class="label">Выходные</div><div class="value">${totals.v}</div><div class="sub">дней</div></div>
+    <div class="stat d"><div class="label">Дорога</div><div class="value">${totals.d}</div><div class="sub">× 8 ч</div></div>
+    <div class="stat y"><div class="label">Дневные</div><div class="value">${totals.y}</div><div class="sub">× 11 ч</div></div>
+    <div class="stat n"><div class="label">Ночные</div><div class="value">${totals.n}</div><div class="sub">× 11 ч</div></div>
+    ${totals.o > 0 ? `<div class="stat o"><div class="label">Отпуск</div><div class="value">${totals.o}</div><div class="sub">дней</div></div>` : ''}
+    <div class="stat total"><div class="label">Часов за год</div><div class="value">${totalHours}</div><div class="sub">${workDays} раб. дней</div></div>
+  `;
+}
+
+function renderMonths(scheduleByMonth) {
+  const container = document.getElementById('months');
+  container.innerHTML = '';
+
+  MONTHS.forEach((monthName, mIdx) => {
+    const monthEl = document.createElement('div');
+    monthEl.className = 'month';
+
+    const title = document.createElement('h2');
+    title.textContent = monthName;
+    monthEl.appendChild(title);
+
+    const grid = document.createElement('div');
+    grid.className = 'grid';
+
+    DOW.forEach(d => {
+      const el = document.createElement('div');
+      el.className = 'dow';
+      el.textContent = d;
+      grid.appendChild(el);
+    });
+
+    const firstDay = new Date(currentYear, mIdx, 1);
+    const startCol = (firstDay.getDay() + 6) % 7;
+
+    for (let i = 0; i < startCol; i++) {
+      const el = document.createElement('div');
+      el.className = 'day empty';
+      grid.appendChild(el);
+    }
+
+    const schedule = scheduleByMonth[mIdx];
+    const daysInMonth = new Date(currentYear, mIdx + 1, 0).getDate();
+    for (let d = 1; d <= daysInMonth; d++) {
+      const type = schedule[d];
+      const el = document.createElement('div');
+      el.className = 'day ' + type;
+      el.textContent = d;
+      el.addEventListener('click', () => openModal(currentYear, mIdx, d, type));
+      grid.appendChild(el);
+    }
+
+    monthEl.appendChild(grid);
+    container.appendChild(monthEl);
+  });
+}
+
+function renderNote() {
+  const note = document.getElementById('note');
+  if (currentYear === 2027) {
+    note.innerHTML = `<strong>2027:</strong> 🏖 отпуск 18.06–11.07 (24 дн.) · отпуск 20.09–13.10 (24 дн.)`;
+  } else {
+    note.innerHTML = `<strong>${currentYear}:</strong> стандартный цикл перевахтовки`;
+  }
+}
+
+function renderAll() {
+  renderYearTabs();
+  const scheduleByMonth = {};
+  for (let m = 0; m < 12; m++) scheduleByMonth[m] = getSchedule(currentYear, m);
+  renderStats(scheduleByMonth);
+  renderMonths(scheduleByMonth);
+  renderNote();
+}
+
+function openModal(year, mIdx, day, type) {
+  const t = TYPES[type];
+  const date = new Date(year, mIdx, day);
+  const dow = DOW[(date.getDay() + 6) % 7];
+
+  document.getElementById('modal-title').textContent = `${day} ${MONTHS_GEN[mIdx]} ${year}`;
+  const badge = document.getElementById('modal-badge');
+  badge.className = 'badge ' + type;
+  badge.textContent = t.label;
+  document.getElementById('modal-detail').textContent = `${dow} · ${t.desc}`;
+  document.getElementById('modal-hours').textContent =
+    t.hours > 0 ? `Рабочих часов: ${t.hours}` : 'Рабочих часов: 0';
+  document.getElementById('modal').classList.add('active');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('active');
+}
+
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target.id === 'modal') closeModal();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+});
+
+renderAll();
+</script>
+</body>
+</html>
