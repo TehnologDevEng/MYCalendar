@@ -32,6 +32,11 @@ jobs:
       - name: Build production bundle
         run: npm run build
 
+      - name: Prepare GitHub Pages static files
+        run: |
+          touch dist/.nojekyll
+          cp dist/index.html dist/404.html
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 

@@ -48,7 +48,7 @@ export const SummaryTableView: React.FC<SummaryTableViewProps> = ({
   const fourYearWorkDays = multiYearStats.reduce((acc, item) => acc + item.stats.workDays, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       {/* Monthly table for active year */}
       <section className="bg-white dark:bg-[#111927] rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
         <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -63,14 +63,64 @@ export const SummaryTableView: React.FC<SummaryTableViewProps> = ({
           <button
             type="button"
             onClick={onDownloadMonthlyCsv}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors whitespace-nowrap shrink-0 self-start sm:self-auto cursor-pointer"
+            className="inline-flex items-center justify-center gap-1.5 px-3.5 min-h-[40px] sm:min-h-[34px] text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors whitespace-nowrap shrink-0 self-start sm:self-auto cursor-pointer"
           >
             <Download className="w-3.5 h-3.5" />
             Скачать таблицу (CSV)
           </button>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Mobile compact month list */}
+        <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800/80">
+          {monthlyBreakdown.map((m) => (
+            <div key={m.monthIndex} className="px-4 py-3 flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  {m.monthName}
+                </div>
+                <div className="text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400 mt-0.5 flex flex-wrap gap-x-2">
+                  <span className="text-amber-800 dark:text-amber-300">Я:{m.counts.y}</span>
+                  <span className="text-indigo-800 dark:text-indigo-300">Н:{m.counts.n}</span>
+                  <span className="text-orange-800 dark:text-orange-300">Д:{m.counts.d}</span>
+                  {m.counts.o > 0 && (
+                    <span className="text-rose-700 dark:text-rose-300">О:{m.counts.o}</span>
+                  )}
+                  <span className="text-emerald-800 dark:text-emerald-300">В:{m.counts.v}</span>
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                <div className="font-mono tabular-nums text-sm font-bold text-slate-900 dark:text-slate-100">
+                  {m.totalHours} ч
+                </div>
+                <div className="font-mono tabular-nums text-[11px] text-slate-500 dark:text-slate-400">
+                  {m.workDays} раб. дн.
+                </div>
+              </div>
+            </div>
+          ))}
+          <div className="px-4 py-3.5 bg-slate-50/90 dark:bg-slate-900/70 flex items-center justify-between gap-3">
+            <div>
+              <div className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                Итого за {year}
+              </div>
+              <div className="text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400 mt-0.5">
+                Я:{yearTotals.y} · Н:{yearTotals.n} · Д:{yearTotals.d}
+                {yearTotals.o > 0 ? ` · О:${yearTotals.o}` : ''} · В:{yearTotals.v}
+              </div>
+            </div>
+            <div className="text-right shrink-0">
+              <div className="font-mono tabular-nums text-base font-bold text-blue-700 dark:text-blue-400">
+                {yearTotals.totalHours} ч
+              </div>
+              <div className="font-mono tabular-nums text-[11px] text-slate-500 dark:text-slate-400">
+                {yearTotals.workDays} раб. дн.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-50/70 dark:bg-slate-900/50">
@@ -149,21 +199,64 @@ export const SummaryTableView: React.FC<SummaryTableViewProps> = ({
         </div>
       </section>
 
-      {/* 4-year comparison table */}
+      {/* 4-year comparison */}
       <section className="bg-white dark:bg-[#111927] rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
         <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800">
           <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
             Сравнение по годам · 2027–2030
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Нажмите на строку года для переключения активного календаря · Всего за 4 года:{' '}
+            Нажмите на год для переключения · Всего за 4 года:{' '}
             <span className="font-mono tabular-nums font-medium text-slate-700 dark:text-slate-300">
               {fourYearHours} ч ({fourYearWorkDays} раб. дней)
             </span>
           </p>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Mobile 4-year list */}
+        <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800/80">
+          {multiYearStats.map(({ year: y, stats }) => {
+            const isActive = y === year;
+            return (
+              <button
+                key={y}
+                type="button"
+                onClick={() => onSelectYear(y)}
+                className={`w-full text-left px-4 py-3.5 flex items-center justify-between gap-3 transition-colors cursor-pointer ${
+                  isActive
+                    ? 'bg-blue-50/70 dark:bg-blue-950/40'
+                    : 'active:bg-slate-50 dark:active:bg-slate-800/40'
+                }`}
+              >
+                <div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="font-mono tabular-nums text-base font-bold text-slate-900 dark:text-slate-100">
+                      {y}
+                    </span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                      {stats.totalDays} дн.{y === 2028 ? ' · високосный' : ''}
+                    </span>
+                  </div>
+                  <div className="text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400 mt-0.5">
+                    Я:{stats.counts.y} · Н:{stats.counts.n} · Д:{stats.counts.d}
+                    {stats.counts.o > 0 ? ` · О:${stats.counts.o}` : ''} · В:{stats.counts.v}
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="font-mono tabular-nums text-sm font-bold text-blue-700 dark:text-blue-400">
+                    {stats.totalHours} ч
+                  </div>
+                  <div className="font-mono tabular-nums text-[11px] text-slate-500 dark:text-slate-400">
+                    {stats.workDays} смен
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Desktop 4-year table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-50/70 dark:bg-slate-900/50">

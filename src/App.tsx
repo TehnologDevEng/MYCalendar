@@ -4,9 +4,9 @@ import {
   CalendarRange,
   Download,
   ListChecks,
-  Menu,
   Moon,
   Search,
+  SlidersHorizontal,
   Sun,
   Table2,
   X,
@@ -57,11 +57,19 @@ const STORAGE_KEYS = {
 
 function loadJson<T>(key: string, fallback: T): T {
   try {
-    const raw = localStorage.getItem(key);
+    const raw = window.localStorage.getItem(key);
     if (!raw) return fallback;
     return JSON.parse(raw) as T;
   } catch {
     return fallback;
+  }
+}
+
+function saveJson<T>(key: string, value: T): void {
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Ignore storage quota or private-mode security errors
   }
 }
 
@@ -75,7 +83,7 @@ export default function App() {
   const [darkMode, setDarkMode] = useState<boolean>(() =>
     loadJson<boolean>(STORAGE_KEYS.theme, false)
   );
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
 
   const [vacations, setVacations] = useState<VacationRange[]>(() =>
     loadJson<VacationRange[]>(STORAGE_KEYS.vacations, DEFAULT_VACATIONS)
@@ -94,23 +102,23 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
-    localStorage.setItem(STORAGE_KEYS.theme, JSON.stringify(darkMode));
+    saveJson(STORAGE_KEYS.theme, darkMode);
   }, [darkMode]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.vacations, JSON.stringify(vacations));
+    saveJson(STORAGE_KEYS.vacations, vacations);
   }, [vacations]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.overrides, JSON.stringify(overrides));
+    saveJson(STORAGE_KEYS.overrides, overrides);
   }, [overrides]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.notes, JSON.stringify(notes));
+    saveJson(STORAGE_KEYS.notes, notes);
   }, [notes]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.showCodes, JSON.stringify(showCellCodes));
+    saveJson(STORAGE_KEYS.showCodes, showCellCodes);
   }, [showCellCodes]);
 
   const scheduleByMonth = useMemo(
@@ -178,7 +186,7 @@ export default function App() {
     setActiveFilter('all');
     setHighlightedMonth(targetMonth);
     setSelectedDate(isoDate);
-    setMobileMenuOpen(false);
+    setMobileToolsOpen(false);
 
     setTimeout(() => {
       const el = document.getElementById(`month-card-${targetMonth}`);
@@ -245,16 +253,23 @@ export default function App() {
   const overridesCount = Object.keys(overrides).length;
   const notesCount = Object.values(notes).filter((v) => v.trim().length > 0).length;
 
-  const navItems: { id: ActiveTab; label: string; icon: typeof CalendarDays; count?: number }[] = [
-    { id: 'calendar', label: 'Годовой календарь', icon: CalendarDays },
-    { id: 'rotations', label: 'Список вахт', icon: ListChecks },
+  const navItems: {
+    id: ActiveTab;
+    label: string;
+    shortLabel: string;
+    icon: typeof CalendarDays;
+    count?: number;
+  }[] = [
+    { id: 'calendar', label: 'Годовой календарь', shortLabel: 'Календарь', icon: CalendarDays },
+    { id: 'rotations', label: 'Список вахт', shortLabel: 'Вахты', icon: ListChecks },
     {
       id: 'vacations',
       label: 'Отпуска и правки',
+      shortLabel: 'Отпуска',
       icon: CalendarRange,
       count: vacations.length + overridesCount,
     },
-    { id: 'summary', label: 'Сводка 2027–2030', icon: Table2 },
+    { id: 'summary', label: 'Сводка 2027–2030', shortLabel: 'Сводка', icon: Table2 },
   ];
 
   const activeTabLabel = navItems.find((i) => i.id === activeTab)?.label ?? 'Календарь';
@@ -274,8 +289,8 @@ export default function App() {
         </div>
       </div>
 
-      {/* Navigation */}
-      <nav className="p-3 space-y-1 border-b border-slate-200 dark:border-slate-800">
+      {/* Navigation (desktop sidebar) */}
+      <nav className="hidden lg:block p-3 space-y-1 border-b border-slate-200 dark:border-slate-800">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -283,10 +298,7 @@ export default function App() {
             <button
               key={item.id}
               type="button"
-              onClick={() => {
-                setActiveTab(item.id);
-                setMobileMenuOpen(false);
-              }}
+              onClick={() => setActiveTab(item.id)}
               className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                 isActive
                   ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300'
@@ -320,7 +332,7 @@ export default function App() {
           value={lookupDate}
           onChange={(e) => setLookupDate(e.target.value)}
           aria-label="Выбрать дату для проверки смены"
-          className="w-full h-9 px-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono tabular-nums text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-600"
+          className="w-full h-10 lg:h-9 px-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm lg:text-xs font-mono tabular-nums text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-600"
         />
         {lookupResult && (
           <div className="pt-1 space-y-1.5">
@@ -382,8 +394,9 @@ export default function App() {
                 onClick={() => {
                   setActiveFilter((prev) => (prev === code ? 'all' : code));
                   if (activeTab !== 'calendar') setActiveTab('calendar');
+                  setMobileToolsOpen(false);
                 }}
-                className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg text-left text-xs transition-colors cursor-pointer ${
+                className={`w-full min-h-[40px] lg:min-h-0 flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg text-left text-xs transition-colors cursor-pointer ${
                   isActive
                     ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold'
                     : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50'
@@ -407,11 +420,11 @@ export default function App() {
       </div>
 
       {/* Bottom utilities */}
-      <div className="p-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
+      <div className="p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:pb-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
         <button
           type="button"
           onClick={() => setDarkMode((prev) => !prev)}
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+          className="min-h-[40px] lg:min-h-0 inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
         >
           {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           {darkMode ? 'Светлая тема' : 'Тёмная тема'}
@@ -422,7 +435,7 @@ export default function App() {
             type="button"
             onClick={() => {
               setActiveTab('vacations');
-              setMobileMenuOpen(false);
+              setMobileToolsOpen(false);
             }}
             className="text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 px-2 py-1 cursor-pointer"
           >
@@ -440,22 +453,22 @@ export default function App() {
         {sidebarContent}
       </aside>
 
-      {/* Mobile Sidebar Drawer */}
-      {mobileMenuOpen && (
+      {/* Mobile Tools Drawer (Date Check, Shift Legend, Theme) */}
+      {mobileToolsOpen && (
         <div
           className="fixed inset-0 z-40 lg:hidden bg-slate-950/50 backdrop-blur-[2px] flex"
           onClick={(e) => {
-            if (e.target === e.currentTarget) setMobileMenuOpen(false);
+            if (e.target === e.currentTarget) setMobileToolsOpen(false);
           }}
         >
           <aside className="w-72 max-w-[85vw] bg-white dark:bg-[#111927] h-full border-r border-slate-200 dark:border-slate-800 relative">
             <button
               type="button"
-              onClick={() => setMobileMenuOpen(false)}
-              aria-label="Закрыть меню"
-              className="absolute top-4 right-3 p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              onClick={() => setMobileToolsOpen(false)}
+              aria-label="Закрыть панель"
+              className="absolute top-3.5 right-3 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
             {sidebarContent}
           </aside>
@@ -464,19 +477,19 @@ export default function App() {
 
       {/* Main Content Area */}
       <div className="flex-1 min-w-0 flex flex-col">
-        {/* Clean Top Header Bar */}
-        <header className="sticky top-0 z-20 h-14 bg-white/95 dark:bg-[#111927]/95 backdrop-blur-xs border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0">
+        {/* Compact Top Header Bar (48px on mobile, 56px on desktop) */}
+        <header className="sticky top-0 z-20 h-12 lg:h-14 bg-white/95 dark:bg-[#111927]/95 backdrop-blur-xs border-b border-slate-200 dark:border-slate-800 px-3 sm:px-6 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
             <button
               type="button"
-              onClick={() => setMobileMenuOpen(true)}
-              aria-label="Открыть навигацию"
-              className="lg:hidden p-2 -ml-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              onClick={() => setMobileToolsOpen(true)}
+              aria-label="Проверка даты, фильтры и тема"
+              className="lg:hidden min-h-[40px] min-w-[40px] -ml-1 flex items-center justify-center rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
             >
-              <Menu className="w-5 h-5" />
+              <SlidersHorizontal className="w-4 h-4" />
             </button>
-            <div className="flex items-center gap-2 text-sm truncate">
-              <span className="font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap">
+            <div className="flex items-center gap-1.5 text-sm truncate">
+              <span className="font-semibold text-slate-900 dark:text-slate-100 truncate">
                 {activeTabLabel}
               </span>
               <span className="text-slate-300 dark:text-slate-700" aria-hidden="true">
@@ -488,27 +501,36 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => setDarkMode((prev) => !prev)}
+              aria-label={darkMode ? 'Включить светлую тему' : 'Включить тёмную тему'}
+              className="lg:hidden min-h-[40px] min-w-[40px] flex items-center justify-center rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
             <button
               type="button"
               onClick={() => setExportOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 min-h-[36px] rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium transition-colors whitespace-nowrap shrink-0 cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
-              Экспорт .ics / CSV
+              <span className="sm:hidden">Экспорт</span>
+              <span className="hidden sm:inline">Экспорт .ics / CSV</span>
             </button>
           </div>
         </header>
 
         {/* Main Viewport */}
-        <main className="flex-1 px-4 sm:px-6 py-6 max-w-[1280px] w-full mx-auto space-y-6">
+        <main className="flex-1 px-3 sm:px-6 pt-4 sm:pt-6 pb-24 lg:pb-8 max-w-[1280px] w-full mx-auto space-y-4 sm:space-y-6">
           {/* Year switcher & Workspace Toolbar */}
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 sm:gap-4">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
                 График вахты на {year} год
               </h1>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 sm:mt-1">
                 {yearVacations.length > 0 ? (
                   <>
                     Отпуска:{' '}
@@ -530,12 +552,12 @@ export default function App() {
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2.5 no-print">
+            <div className="flex flex-wrap items-center gap-2 no-print">
               {/* Year Segmented Control */}
               <div
                 role="tablist"
                 aria-label="Выбор года"
-                className="inline-flex items-center p-1 bg-white dark:bg-[#111927] border border-slate-200 dark:border-slate-800 rounded-lg"
+                className="grid grid-cols-4 sm:inline-flex w-full sm:w-auto items-center p-1 bg-white dark:bg-[#111927] border border-slate-200 dark:border-slate-800 rounded-lg"
               >
                 {YEARS.map((y) => (
                   <button
@@ -544,7 +566,7 @@ export default function App() {
                     role="tab"
                     aria-selected={year === y}
                     onClick={() => setYear(y)}
-                    className={`px-3.5 py-1.5 text-sm font-mono tabular-nums font-semibold rounded-md transition-colors whitespace-nowrap cursor-pointer ${
+                    className={`min-h-[38px] sm:min-h-[34px] px-2 sm:px-3.5 text-sm font-mono tabular-nums font-semibold rounded-md transition-colors whitespace-nowrap cursor-pointer ${
                       year === y
                         ? 'bg-blue-600 text-white'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
@@ -559,7 +581,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setShowCellCodes((prev) => !prev)}
-                  className={`px-3 py-2 text-xs font-medium rounded-lg border transition-colors whitespace-nowrap cursor-pointer ${
+                  className={`min-h-[38px] sm:min-h-[34px] px-3 text-xs font-medium rounded-lg border transition-colors whitespace-nowrap cursor-pointer ${
                     showCellCodes
                       ? 'bg-slate-900 text-white border-slate-900 dark:bg-slate-100 dark:text-slate-900 dark:border-slate-100'
                       : 'bg-white dark:bg-[#111927] text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
@@ -571,17 +593,19 @@ export default function App() {
             </div>
           </div>
 
-          {/* KPI Summary Strip (Single Elevation, Hairline Divider Grid) */}
+          {/* KPI Summary Strip with uniform 1px grid hairlines across all breakpoints */}
           <section
             aria-label="Годовая статистика смен"
-            className="bg-white dark:bg-[#111927] rounded-xl border border-slate-200 dark:border-slate-800 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 divide-y sm:divide-y-0 sm:divide-x divide-slate-200 dark:divide-slate-800 overflow-hidden"
+            className="rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden bg-slate-200 dark:bg-slate-800 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-px"
           >
-            <div className="p-4">
-              <div className="text-xs text-slate-500 dark:text-slate-400">Часов за год</div>
-              <div className="text-2xl font-mono tabular-nums font-bold text-blue-700 dark:text-blue-400 mt-1">
+            <div className="p-3 sm:p-4 bg-white dark:bg-[#111927]">
+              <div className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
+                Часов за год
+              </div>
+              <div className="text-xl sm:text-2xl font-mono tabular-nums font-bold text-blue-700 dark:text-blue-400 mt-0.5 sm:mt-1">
                 {stats.totalHours}
               </div>
-              <div className="text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400 mt-0.5">
+              <div className="text-[11px] sm:text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400 mt-0.5">
                 {stats.workDays} раб. дней
               </div>
             </div>
@@ -592,17 +616,19 @@ export default function App() {
                 setActiveFilter((p) => (p === 'y' ? 'all' : 'y'));
                 setActiveTab('calendar');
               }}
-              className={`p-4 text-left transition-colors cursor-pointer ${
+              className={`p-3 sm:p-4 text-left transition-colors cursor-pointer ${
                 activeFilter === 'y'
-                  ? 'bg-amber-50/70 dark:bg-amber-950/30'
-                  : 'hover:bg-slate-50/70 dark:hover:bg-slate-800/30'
+                  ? 'bg-amber-50 dark:bg-amber-950/60'
+                  : 'bg-white dark:bg-[#111927] hover:bg-slate-50 dark:hover:bg-slate-800/40'
               }`}
             >
-              <div className="text-xs text-slate-500 dark:text-slate-400">Дневные (Я)</div>
-              <div className="text-2xl font-mono tabular-nums font-bold text-amber-800 dark:text-amber-300 mt-1">
+              <div className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
+                Дневные (Я)
+              </div>
+              <div className="text-xl sm:text-2xl font-mono tabular-nums font-bold text-amber-800 dark:text-amber-300 mt-0.5 sm:mt-1">
                 {stats.counts.y}
               </div>
-              <div className="text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400 mt-0.5">
+              <div className="text-[11px] sm:text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400 mt-0.5">
                 {stats.counts.y * 11} ч · по 11 ч
               </div>
             </button>
@@ -613,17 +639,19 @@ export default function App() {
                 setActiveFilter((p) => (p === 'n' ? 'all' : 'n'));
                 setActiveTab('calendar');
               }}
-              className={`p-4 text-left transition-colors cursor-pointer ${
+              className={`p-3 sm:p-4 text-left transition-colors cursor-pointer ${
                 activeFilter === 'n'
-                  ? 'bg-indigo-50/70 dark:bg-indigo-950/30'
-                  : 'hover:bg-slate-50/70 dark:hover:bg-slate-800/30'
+                  ? 'bg-indigo-50 dark:bg-indigo-950/60'
+                  : 'bg-white dark:bg-[#111927] hover:bg-slate-50 dark:hover:bg-slate-800/40'
               }`}
             >
-              <div className="text-xs text-slate-500 dark:text-slate-400">Ночные (Н)</div>
-              <div className="text-2xl font-mono tabular-nums font-bold text-indigo-800 dark:text-indigo-300 mt-1">
+              <div className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
+                Ночные (Н)
+              </div>
+              <div className="text-xl sm:text-2xl font-mono tabular-nums font-bold text-indigo-800 dark:text-indigo-300 mt-0.5 sm:mt-1">
                 {stats.counts.n}
               </div>
-              <div className="text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400 mt-0.5">
+              <div className="text-[11px] sm:text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400 mt-0.5">
                 {stats.counts.n * 11} ч · по 11 ч
               </div>
             </button>
@@ -634,17 +662,19 @@ export default function App() {
                 setActiveFilter((p) => (p === 'd' ? 'all' : 'd'));
                 setActiveTab('calendar');
               }}
-              className={`p-4 text-left transition-colors cursor-pointer ${
+              className={`p-3 sm:p-4 text-left transition-colors cursor-pointer ${
                 activeFilter === 'd'
-                  ? 'bg-orange-50/70 dark:bg-orange-950/30'
-                  : 'hover:bg-slate-50/70 dark:hover:bg-slate-800/30'
+                  ? 'bg-orange-50 dark:bg-orange-950/60'
+                  : 'bg-white dark:bg-[#111927] hover:bg-slate-50 dark:hover:bg-slate-800/40'
               }`}
             >
-              <div className="text-xs text-slate-500 dark:text-slate-400">Дорога (Д)</div>
-              <div className="text-2xl font-mono tabular-nums font-bold text-orange-800 dark:text-orange-300 mt-1">
+              <div className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
+                Дорога (Д)
+              </div>
+              <div className="text-xl sm:text-2xl font-mono tabular-nums font-bold text-orange-800 dark:text-orange-300 mt-0.5 sm:mt-1">
                 {stats.counts.d}
               </div>
-              <div className="text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400 mt-0.5">
+              <div className="text-[11px] sm:text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400 mt-0.5">
                 {stats.counts.d * 8} ч · по 8 ч
               </div>
             </button>
@@ -655,17 +685,19 @@ export default function App() {
                 setActiveFilter((p) => (p === 'v' ? 'all' : 'v'));
                 setActiveTab('calendar');
               }}
-              className={`p-4 text-left transition-colors cursor-pointer ${
+              className={`p-3 sm:p-4 text-left transition-colors cursor-pointer ${
                 activeFilter === 'v'
-                  ? 'bg-emerald-50/70 dark:bg-emerald-950/30'
-                  : 'hover:bg-slate-50/70 dark:hover:bg-slate-800/30'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/60'
+                  : 'bg-white dark:bg-[#111927] hover:bg-slate-50 dark:hover:bg-slate-800/40'
               }`}
             >
-              <div className="text-xs text-slate-500 dark:text-slate-400">Выходные (В)</div>
-              <div className="text-2xl font-mono tabular-nums font-bold text-emerald-800 dark:text-emerald-300 mt-1">
+              <div className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
+                Выходные (В)
+              </div>
+              <div className="text-xl sm:text-2xl font-mono tabular-nums font-bold text-emerald-800 dark:text-emerald-300 mt-0.5 sm:mt-1">
                 {stats.counts.v}
               </div>
-              <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <div className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 отдыхающая вахта
               </div>
             </button>
@@ -676,17 +708,19 @@ export default function App() {
                 setActiveFilter((p) => (p === 'o' ? 'all' : 'o'));
                 setActiveTab('calendar');
               }}
-              className={`p-4 text-left transition-colors cursor-pointer ${
+              className={`p-3 sm:p-4 text-left transition-colors cursor-pointer ${
                 activeFilter === 'o'
-                  ? 'bg-rose-50/70 dark:bg-rose-950/30'
-                  : 'hover:bg-slate-50/70 dark:hover:bg-slate-800/30'
+                  ? 'bg-rose-50 dark:bg-rose-950/60'
+                  : 'bg-white dark:bg-[#111927] hover:bg-slate-50 dark:hover:bg-slate-800/40'
               }`}
             >
-              <div className="text-xs text-slate-500 dark:text-slate-400">Отпуск (О)</div>
-              <div className="text-2xl font-mono tabular-nums font-bold text-rose-700 dark:text-rose-300 mt-1">
+              <div className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
+                Отпуск (О)
+              </div>
+              <div className="text-xl sm:text-2xl font-mono tabular-nums font-bold text-rose-700 dark:text-rose-300 mt-0.5 sm:mt-1">
                 {stats.counts.o}
               </div>
-              <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <div className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 {stats.counts.o > 0 ? pluralizeDays(stats.counts.o) : 'не запланирован'}
               </div>
             </button>
@@ -694,21 +728,20 @@ export default function App() {
 
           {/* Active filter notification */}
           {activeTab === 'calendar' && activeFilter !== 'all' && (
-            <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg bg-white dark:bg-[#111927] border border-slate-200 dark:border-slate-800 text-xs">
+            <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-lg bg-white dark:bg-[#111927] border border-slate-200 dark:border-slate-800 text-xs">
               <span className="text-slate-600 dark:text-slate-300">
                 Выделен тип дней:{' '}
                 <strong className="text-slate-900 dark:text-slate-100">
                   {SHIFT_TYPES[activeFilter].label}
                 </strong>{' '}
-                ({stats.counts[activeFilter]} {pluralizeDays(stats.counts[activeFilter])} в {year}{' '}
-                году)
+                ({stats.counts[activeFilter]} {pluralizeDays(stats.counts[activeFilter])})
               </span>
               <button
                 type="button"
                 onClick={() => setActiveFilter('all')}
                 className="font-medium text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap cursor-pointer"
               >
-                Показать все дни
+                Все дни
               </button>
             </div>
           )}
@@ -765,7 +798,40 @@ export default function App() {
         </main>
       </div>
 
-      {/* Day Inspector & Override Modal */}
+      {/* Fixed Bottom Tab Bar for Mobile Thumb Navigation (56px + safe area) */}
+      <nav
+        aria-label="Основная навигация"
+        className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 dark:bg-[#111927]/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 pb-[env(safe-area-inset-bottom)] no-print"
+      >
+        <div className="grid grid-cols-4 h-14">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => {
+                  setActiveTab(item.id);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className={`flex flex-col items-center justify-center gap-0.5 transition-colors cursor-pointer ${
+                  isActive
+                    ? 'text-blue-600 dark:text-blue-400 font-semibold'
+                    : 'text-slate-500 dark:text-slate-400'
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+                <span className="text-[10px] leading-none tracking-tight">
+                  {item.shortLabel}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+
+      {/* Day Inspector & Override Sheet */}
       {selectedDayInfo && (
         <DayDetailModal
           isoDate={selectedDayInfo.isoDate}
@@ -782,7 +848,7 @@ export default function App() {
         />
       )}
 
-      {/* Export Modal */}
+      {/* Export Sheet */}
       {exportOpen && (
         <ExportModal
           year={year}

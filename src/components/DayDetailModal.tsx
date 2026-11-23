@@ -76,7 +76,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[2px] flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[2px] flex items-end sm:items-center justify-center sm:p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           handleNoteBlur();
@@ -88,23 +88,29 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby="day-modal-title"
-        className="w-full max-w-md bg-white dark:bg-[#111927] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden"
+        className="w-full sm:max-w-md max-h-[90dvh] flex flex-col bg-white dark:bg-[#111927] rounded-t-3xl sm:rounded-2xl border-t sm:border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden"
       >
+        {/* Mobile sheet drag handle */}
+        <div className="sm:hidden pt-2.5 pb-1 flex justify-center shrink-0">
+          <div className="w-10 h-1 rounded-full bg-slate-300 dark:bg-slate-700" aria-hidden="true" />
+        </div>
+
         {/* Header */}
-        <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
-          <div>
+        <div className="px-5 py-3.5 sm:py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 shrink-0">
+          <div className="min-w-0">
             <h3
               id="day-modal-title"
-              className="text-lg font-bold text-slate-900 dark:text-slate-100 leading-tight"
+              className="text-lg font-bold text-slate-900 dark:text-slate-100 leading-tight truncate"
             >
               {day} {MONTHS_GEN[month]} {year}
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              {dowLabel} · код в табеле: <span className="font-mono font-semibold">{shiftMeta.shortCode}</span>
+              {dowLabel} · код в табеле:{' '}
+              <span className="font-mono font-semibold">{shiftMeta.shortCode}</span>
             </p>
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5 shrink-0">
             <button
               type="button"
               onClick={() => {
@@ -112,9 +118,9 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                 onNavigateDay(-1);
               }}
               aria-label="Предыдущий день"
-              className="p-2 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             >
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="w-5 h-5 sm:w-4 sm:h-4" />
             </button>
             <button
               type="button"
@@ -123,9 +129,9 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                 onNavigateDay(1);
               }}
               aria-label="Следующий день"
-              className="p-2 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             >
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-5 h-5 sm:w-4 sm:h-4" />
             </button>
             <button
               type="button"
@@ -134,15 +140,15 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                 onClose();
               }}
               aria-label="Закрыть"
-              className="p-2 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5 sm:w-4 sm:h-4" />
             </button>
           </div>
         </div>
 
-        {/* Body */}
-        <div className="p-5 space-y-5">
+        {/* Scrollable Body */}
+        <div className="p-5 space-y-5 overflow-y-auto flex-1">
           {/* Current shift summary */}
           <div className={`p-4 rounded-xl border ${shiftStyle.surface}`}>
             <div className="flex items-baseline justify-between gap-2">
@@ -213,7 +219,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                         onSetOverride(isoDate, code);
                       }
                     }}
-                    className={`py-2 px-1 rounded-lg border text-center transition-all cursor-pointer ${
+                    className={`min-h-[50px] py-2 px-1 rounded-lg border text-center transition-all active:scale-95 cursor-pointer ${
                       st.cell
                     } ${
                       isSelected
@@ -244,20 +250,20 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
               onChange={(e) => setDraftNote(e.target.value)}
               onBlur={handleNoteBlur}
               placeholder="Билеты, поезд, перевахтовка, медосмотр..."
-              className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 resize-none"
+              className="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-base sm:text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 resize-none"
             />
           </div>
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3.5 bg-slate-50/80 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end">
+        <div className="px-5 py-3.5 pb-[calc(0.875rem+env(safe-area-inset-bottom))] sm:pb-3.5 bg-slate-50/80 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-800 shrink-0">
           <button
             type="button"
             onClick={() => {
               handleNoteBlur();
               onClose();
             }}
-            className="px-4 py-2 rounded-lg bg-slate-900 dark:bg-blue-600 hover:bg-slate-800 dark:hover:bg-blue-700 text-white text-sm font-medium transition-colors cursor-pointer"
+            className="w-full sm:w-auto sm:ml-auto sm:flex px-5 min-h-[44px] sm:min-h-[38px] items-center justify-center rounded-xl sm:rounded-lg bg-slate-900 dark:bg-blue-600 hover:bg-slate-800 dark:hover:bg-blue-700 text-white text-sm font-medium transition-colors cursor-pointer"
           >
             Готово
           </button>

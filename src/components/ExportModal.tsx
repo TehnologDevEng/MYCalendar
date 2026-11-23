@@ -95,7 +95,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[2px] flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-[2px] flex items-end sm:items-center justify-center sm:p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -104,9 +104,13 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby="export-modal-title"
-        className="w-full max-w-md bg-white dark:bg-[#111927] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden"
+        className="w-full sm:max-w-md max-h-[90dvh] flex flex-col bg-white dark:bg-[#111927] rounded-t-3xl sm:rounded-2xl border-t sm:border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden"
       >
-        <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+        <div className="sm:hidden pt-2.5 pb-1 flex justify-center shrink-0">
+          <div className="w-10 h-1 rounded-full bg-slate-300 dark:bg-slate-700" aria-hidden="true" />
+        </div>
+
+        <div className="px-5 py-3.5 sm:py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 shrink-0">
           <div>
             <h3
               id="export-modal-title"
@@ -122,13 +126,13 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             type="button"
             onClick={onClose}
             aria-label="Закрыть"
-            className="p-2 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            className="min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5 sm:w-4 sm:h-4" />
           </button>
         </div>
 
-        <div className="p-5 space-y-5">
+        <div className="p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:pb-5 space-y-5 overflow-y-auto flex-1">
           {/* ICS export */}
           <div>
             <div className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100 mb-2">
@@ -144,7 +148,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                 return (
                   <label
                     key={code}
-                    className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer text-sm"
+                    className="flex items-center justify-between gap-2 px-3 min-h-[44px] rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer text-sm"
                   >
                     <span className="flex items-center gap-2.5 text-slate-800 dark:text-slate-200">
                       <input
@@ -166,7 +170,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               type="button"
               disabled={!anySelected}
               onClick={handleDownloadIcs}
-              className="w-full py-2.5 px-4 inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-45 text-white text-sm font-medium transition-colors cursor-pointer"
+              className="w-full min-h-[44px] py-2.5 px-4 inline-flex items-center justify-center gap-2 rounded-xl sm:rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-45 text-white text-sm font-medium transition-colors cursor-pointer"
             >
               <Download className="w-4 h-4" />
               Скачать vakhta_{year}.ics
@@ -181,7 +185,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             <button
               type="button"
               onClick={handleDownloadMonthlyCsv}
-              className="w-full py-2 px-3.5 inline-flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 transition-colors cursor-pointer"
+              className="w-full min-h-[44px] py-2 px-3.5 inline-flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 transition-colors cursor-pointer"
             >
               <span className="inline-flex items-center gap-2">
                 <FileSpreadsheet className="w-4 h-4 text-slate-500" />
@@ -193,7 +197,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             <button
               type="button"
               onClick={handleDownloadDailyCsv}
-              className="w-full py-2 px-3.5 inline-flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 transition-colors cursor-pointer"
+              className="w-full min-h-[44px] py-2 px-3.5 inline-flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 transition-colors cursor-pointer"
             >
               <span className="inline-flex items-center gap-2">
                 <FileSpreadsheet className="w-4 h-4 text-slate-500" />
@@ -205,7 +209,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             <button
               type="button"
               onClick={handlePrint}
-              className="w-full py-2 px-3.5 inline-flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 transition-colors cursor-pointer"
+              className="w-full min-h-[44px] py-2 px-3.5 inline-flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 transition-colors cursor-pointer"
             >
               <span className="inline-flex items-center gap-2">
                 <Printer className="w-4 h-4 text-slate-500" />

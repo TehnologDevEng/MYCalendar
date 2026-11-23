@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, ChevronRight } from 'lucide-react';
 import {
   BlockCategory,
   RotationBlock,
@@ -60,7 +60,7 @@ export const RotationsListView: React.FC<RotationsListViewProps> = ({
               key={tab.id}
               type="button"
               onClick={() => setFilter(tab.id)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+              className={`min-h-[34px] px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                 filter === tab.id
                   ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
@@ -77,83 +77,143 @@ export const RotationsListView: React.FC<RotationsListViewProps> = ({
           В выбранной категории периодов за {year} год нет.
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-50/70 dark:bg-slate-900/50">
-                <th className="py-3 px-4">Период</th>
-                <th className="py-3 px-4">Даты</th>
-                <th className="py-3 px-4 text-right">Длительность</th>
-                <th className="py-3 px-4 text-right">Дневные</th>
-                <th className="py-3 px-4 text-right">Ночные</th>
-                <th className="py-3 px-4 text-right">Дорога</th>
-                <th className="py-3 px-4 text-right">Часы</th>
-                <th className="py-3 px-4 text-right">Календарь</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 text-sm">
-              {filtered.map((block) => {
-                const title =
-                  block.category === 'work'
-                    ? `Вахта №${block.index}`
-                    : block.category === 'vacation'
-                    ? `Отпуск №${block.index}`
-                    : `Отдых №${block.index}`;
+        <>
+          {/* Mobile tap list (zero horizontal scrolling) */}
+          <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800/80">
+            {filtered.map((block) => {
+              const title =
+                block.category === 'work'
+                  ? `Вахта №${block.index}`
+                  : block.category === 'vacation'
+                  ? `Отпуск №${block.index}`
+                  : `Отдых №${block.index}`;
 
-                const typeColor =
-                  block.category === 'work'
-                    ? 'text-indigo-700 dark:text-indigo-300'
-                    : block.category === 'vacation'
-                    ? 'text-rose-700 dark:text-rose-300'
-                    : 'text-emerald-700 dark:text-emerald-300';
+              const typeColor =
+                block.category === 'work'
+                  ? 'text-indigo-700 dark:text-indigo-300'
+                  : block.category === 'vacation'
+                  ? 'text-rose-700 dark:text-rose-300'
+                  : 'text-emerald-700 dark:text-emerald-300';
 
-                return (
-                  <tr
-                    key={block.id}
-                    className="hover:bg-slate-50/80 dark:hover:bg-slate-800/35 transition-colors"
-                  >
-                    <td className="py-3 px-4 whitespace-nowrap">
-                      <div className="font-semibold text-slate-900 dark:text-slate-100">
+              return (
+                <button
+                  key={block.id}
+                  type="button"
+                  onClick={() => onJumpToDate(block.startDate)}
+                  className="w-full text-left px-4 py-3.5 flex items-center justify-between gap-3 active:bg-slate-50 dark:active:bg-slate-800/50 transition-colors cursor-pointer"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                         {title}
-                      </div>
-                      <div className={`text-xs ${typeColor}`}>
+                      </span>
+                      <span className={`text-xs ${typeColor}`}>
                         {CATEGORY_LABELS[block.category]}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 font-mono tabular-nums text-xs sm:text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">
-                      {formatRuDate(block.startDate)} — {formatRuDate(block.endDate)}
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono tabular-nums text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                      </span>
+                    </div>
+                    <div className="text-xs font-mono tabular-nums text-slate-600 dark:text-slate-300 mt-1">
+                      {formatRuDate(block.startDate)} — {formatRuDate(block.endDate)} ·{' '}
                       {block.days} {pluralizeDays(block.days)}
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono tabular-nums text-slate-600 dark:text-slate-400">
-                      {block.dayShifts > 0 ? block.dayShifts : '—'}
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono tabular-nums text-slate-600 dark:text-slate-400">
-                      {block.nightShifts > 0 ? block.nightShifts : '—'}
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono tabular-nums text-slate-600 dark:text-slate-400">
-                      {block.roadDays > 0 ? block.roadDays : '—'}
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono tabular-nums font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap">
-                      {block.hours > 0 ? `${block.hours} ч` : '0 ч'}
-                    </td>
-                    <td className="py-3 px-4 text-right whitespace-nowrap">
-                      <button
-                        type="button"
-                        onClick={() => onJumpToDate(block.startDate)}
-                        className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 cursor-pointer"
-                      >
-                        Открыть
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                    </div>
+                    {block.category === 'work' && (
+                      <div className="text-[11px] font-mono tabular-nums text-slate-500 dark:text-slate-400 mt-0.5">
+                        Дн: {block.dayShifts} · Ноч: {block.nightShifts} · Дор: {block.roadDays}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="text-right">
+                      <div className="font-mono tabular-nums text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        {block.hours > 0 ? `${block.hours} ч` : '0 ч'}
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-400" />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Desktop data table */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-50/70 dark:bg-slate-900/50">
+                  <th className="py-3 px-4">Период</th>
+                  <th className="py-3 px-4">Даты</th>
+                  <th className="py-3 px-4 text-right">Длительность</th>
+                  <th className="py-3 px-4 text-right">Дневные</th>
+                  <th className="py-3 px-4 text-right">Ночные</th>
+                  <th className="py-3 px-4 text-right">Дорога</th>
+                  <th className="py-3 px-4 text-right">Часы</th>
+                  <th className="py-3 px-4 text-right">Календарь</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 text-sm">
+                {filtered.map((block) => {
+                  const title =
+                    block.category === 'work'
+                      ? `Вахта №${block.index}`
+                      : block.category === 'vacation'
+                      ? `Отпуск №${block.index}`
+                      : `Отдых №${block.index}`;
+
+                  const typeColor =
+                    block.category === 'work'
+                      ? 'text-indigo-700 dark:text-indigo-300'
+                      : block.category === 'vacation'
+                      ? 'text-rose-700 dark:text-rose-300'
+                      : 'text-emerald-700 dark:text-emerald-300';
+
+                  return (
+                    <tr
+                      key={block.id}
+                      className="hover:bg-slate-50/80 dark:hover:bg-slate-800/35 transition-colors"
+                    >
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <div className="font-semibold text-slate-900 dark:text-slate-100">
+                          {title}
+                        </div>
+                        <div className={`text-xs ${typeColor}`}>
+                          {CATEGORY_LABELS[block.category]}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 font-mono tabular-nums text-xs sm:text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                        {formatRuDate(block.startDate)} — {formatRuDate(block.endDate)}
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono tabular-nums text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                        {block.days} {pluralizeDays(block.days)}
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono tabular-nums text-slate-600 dark:text-slate-400">
+                        {block.dayShifts > 0 ? block.dayShifts : '—'}
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono tabular-nums text-slate-600 dark:text-slate-400">
+                        {block.nightShifts > 0 ? block.nightShifts : '—'}
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono tabular-nums text-slate-600 dark:text-slate-400">
+                        {block.roadDays > 0 ? block.roadDays : '—'}
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono tabular-nums font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap">
+                        {block.hours > 0 ? `${block.hours} ч` : '0 ч'}
+                      </td>
+                      <td className="py-3 px-4 text-right whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => onJumpToDate(block.startDate)}
+                          className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 cursor-pointer"
+                        >
+                          Открыть
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );

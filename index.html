@@ -2,12 +2,20 @@
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
     <title>Календарь вахты 2027–2030 · Носар Андрей</title>
     <meta
       name="description"
       content="Интерактивный график вахтовых смен, перевахтовок, отпусков и учёта рабочего времени на 2027–2030 годы."
     />
+    <meta name="theme-color" content="#f6f7f9" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0b111d" media="(prefers-color-scheme: dark)" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Вахта 27–30" />
     <meta property="og:title" content="Календарь вахты 2027–2030 · Носар Андрей" />
     <meta
       property="og:description"
@@ -24,6 +32,11 @@
   </head>
   <body class="bg-[#f6f7f9] text-slate-900 antialiased dark:bg-[#0b111d] dark:text-slate-100">
     <div id="root"></div>
+    <noscript>
+      <div style="padding:24px;font-family:sans-serif;text-align:center;">
+        Для работы календаря вахты необходимо включить JavaScript в браузере.
+      </div>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
