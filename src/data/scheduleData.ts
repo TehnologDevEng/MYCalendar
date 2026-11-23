@@ -1,5 +1,56 @@
 export type ShiftCode = 'v' | 'd' | 'y' | 'n' | 'o';
 
+export type MonthHalfPhase = 'enter' | 'exit';
+
+export type RotationRuleType =
+  | 'short_exit'
+  | 'short_exit_flip'
+  | 'force_exit'
+  | 'force_enter';
+
+export interface RotationRulesMap {
+  // Key format: "YYYY-MM" (1-indexed month, e.g. "2028-09")
+  [yearMonth: string]: RotationRuleType;
+}
+
+export interface RotationRuleOption {
+  type: RotationRuleType;
+  label: string;
+  shortLabel: string;
+  description: string;
+}
+
+export const ROTATION_RULE_OPTIONS: RotationRuleOption[] = [
+  {
+    type: 'short_exit',
+    label: 'Короткая вахта 1–14 (окно отпуска с 15-го)',
+    shortLabel: 'Перевахтовка 1–14',
+    description: '1–8 Я, 9–14 Н, с 15-го числа отдых (окно 15-го – 15-го следующего месяца), цикл сохраняется',
+  },
+  {
+    type: 'short_exit_flip',
+    label: 'Перевахтовка 1–14 со сменой фазы цикла',
+    shortLabel: 'Перевахтовка + сдвиг',
+    description: '1–8 Я, 9–14 Н, с 15-го отдых, а со следующего месяца вахты сдвигаются на другую половину',
+  },
+  {
+    type: 'force_enter',
+    label: 'Сдвиг фазы: отдых 1–15, заезд 16-го',
+    shortLabel: 'Сдвиг (заезд 16-го)',
+    description: '1–15 В, 16 Д, 17–23 Я, 24–конец Н; все последующие месяцы пересчитываются от этой фазы',
+  },
+  {
+    type: 'force_exit',
+    label: 'Сдвиг фазы: работа 1–17, отдых с 18-го',
+    shortLabel: 'Сдвиг (выезд 17-го)',
+    description: '1–8 Я, 9–16 Н, 17 Д, 18–конец В; все последующие месяцы пересчитываются от этой фазы',
+  },
+];
+
+export const DEFAULT_ROTATION_RULES: RotationRulesMap = {
+  '2028-09': 'short_exit',
+};
+
 export interface ShiftMeta {
   code: ShiftCode;
   shortCode: string;
@@ -182,8 +233,8 @@ export const SHIFT_TYPES: Record<ShiftCode, ShiftMeta> = {
   },
 };
 
-// Эталонный паттерн смен из исходного графика 2027 (для Носар А.И.)
-export const TEMPLATE: Record<number, Record<number, ShiftCode>> = {
+// Эталонный график 2027 года (для Носар А.И.) — сохранён без изменений
+export const TEMPLATE_2027: Record<number, Record<number, ShiftCode>> = {
   0: {
     1: 'v', 2: 'v', 3: 'v', 4: 'v', 5: 'v', 6: 'v', 7: 'v', 8: 'v', 9: 'v', 10: 'v',
     11: 'v', 12: 'v', 13: 'v', 14: 'v', 15: 'v', 16: 'd', 17: 'y', 18: 'y', 19: 'y',
@@ -262,15 +313,19 @@ export const DEFAULT_VACATIONS: VacationRange[] = [
     id: 'vac-2027-summer',
     startDate: '2027-06-18',
     endDate: '2027-07-11',
-    title: 'Летний отпуск',
+    title: 'Летний отпуск 2027',
   },
   {
     id: 'vac-2027-autumn',
     startDate: '2027-09-20',
     endDate: '2027-10-13',
-    title: 'Осенний отпуск',
+    title: 'Осенний отпуск 2027',
   },
 ];
+
+export function toYearMonthKey(year: number, monthIndex: number): string {
+  return `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+}
 
 export function toIsoDate(year: number, monthIndex: number, day: number): string {
   const m = String(monthIndex + 1).padStart(2, '0');
@@ -312,8 +367,143 @@ export function countDaysInclusive(startIso: string, endIso: string): number {
   return Math.round((endUtc - startUtc) / 86_400_000) + 1;
 }
 
-export function getTemplateShift(monthIndex: number, day: number): ShiftCode {
-  return TEMPLATE[monthIndex]?.[day] ?? 'v';
+/**
+ * Generates standard days for a single month based on its rotational pattern:
+ * - 'enter': 1-15 rest, 16 road, 17-23 day, 24-end night
+ * - 'exit': 1-8 day, 9-16 night, 17 road, 18-end rest (Feb: 1-7 day, 8-14 night, 15 road, 16-end rest)
+ * - 'short_exit': 1-8 day, 9-14 night, 15-end rest (matches Sept 2027 perevakhtovka)
+ */
+function buildMonthDays(
+  year: number,
+  monthIndex: number,
+  mode: 'enter' | 'exit' | 'short_exit'
+): Record<number, ShiftCode> {
+  const daysInMonth = getDaysInMonth(year, monthIndex);
+  const res: Record<number, ShiftCode> = {};
+
+  if (mode === 'enter') {
+    for (let d = 1; d <= daysInMonth; d++) {
+      if (d <= 15) res[d] = 'v';
+      else if (d === 16) res[d] = 'd';
+      else if (d <= 23) res[d] = 'y';
+      else res[d] = 'n';
+    }
+    return res;
+  }
+
+  if (mode === 'short_exit') {
+    for (let d = 1; d <= daysInMonth; d++) {
+      if (d <= 8) res[d] = 'y';
+      else if (d <= 14) res[d] = 'n';
+      else res[d] = 'v';
+    }
+    return res;
+  }
+
+  // Standard 'exit'
+  const isFeb = monthIndex === 1;
+  for (let d = 1; d <= daysInMonth; d++) {
+    if (isFeb) {
+      if (d <= 7) res[d] = 'y';
+      else if (d <= 14) res[d] = 'n';
+      else if (d === 15) res[d] = 'd';
+      else res[d] = 'v';
+    } else {
+      if (d <= 8) res[d] = 'y';
+      else if (d <= 16) res[d] = 'n';
+      else if (d === 17) res[d] = 'd';
+      else res[d] = 'v';
+    }
+  }
+  return res;
+}
+
+export interface ComputedMonthPattern {
+  mode: 'enter' | 'exit' | 'short_exit' | 'template_2027';
+  hasPerevakhtovka: boolean;
+  ruleLabel: string | null;
+  days: Record<number, ShiftCode>;
+}
+
+/**
+ * Computes continuous 2027–2030 base schedules with exact Dec→Jan continuity
+ * and user-configured перевахтовки (phase flips / short vacation exits).
+ */
+export function buildMultiYearBaseSchedule(
+  rotationRules: RotationRulesMap = DEFAULT_ROTATION_RULES
+): Record<number, Record<number, ComputedMonthPattern>> {
+  const allYears: Record<number, Record<number, ComputedMonthPattern>> = {
+    2027: {},
+    2028: {},
+    2029: {},
+    2030: {},
+  };
+
+  // 2027: exact ground-truth schedule from user's file
+  for (let m = 0; m < 12; m++) {
+    const days: Record<number, ShiftCode> = {};
+    const daysCount = getDaysInMonth(2027, m);
+    for (let d = 1; d <= daysCount; d++) {
+      days[d] = TEMPLATE_2027[m]?.[d] ?? 'v';
+    }
+    allYears[2027][m] = {
+      mode: 'template_2027',
+      hasPerevakhtovka: m === 8, // Sept 2027 had 1–14 short shift for vacation
+      ruleLabel: m === 8 ? 'Перевахтовка 1–14' : null,
+      days,
+    };
+  }
+
+  // December 2027 ends ON SHIFT (16–31 work = 'enter'), so Jan 2028 seamlessly begins with 'exit'!
+  let nextExpectedPhase: MonthHalfPhase = 'exit';
+
+  for (const year of [2028, 2029, 2030] as const) {
+    for (let m = 0; m < 12; m++) {
+      const ymKey = toYearMonthKey(year, m);
+      const rule = rotationRules[ymKey];
+
+      let mode: 'enter' | 'exit' | 'short_exit' = nextExpectedPhase;
+      let hasPerevakhtovka = false;
+      let ruleLabel: string | null = null;
+
+      if (rule === 'short_exit') {
+        mode = 'short_exit';
+        hasPerevakhtovka = true;
+        ruleLabel = 'Перевахтовка 1–14';
+        // After short_exit (rest from 15th), next month starts with 1–15 rest -> 'enter'
+        nextExpectedPhase = 'enter';
+      } else if (rule === 'short_exit_flip') {
+        mode = 'short_exit';
+        hasPerevakhtovka = true;
+        ruleLabel = 'Перевахтовка + сдвиг';
+        // Phase flip: next month jumps straight to 'exit' (1st half work)
+        nextExpectedPhase = 'exit';
+      } else if (rule === 'force_enter') {
+        mode = 'enter';
+        hasPerevakhtovka = true;
+        ruleLabel = 'Сдвиг (заезд 16-го)';
+        nextExpectedPhase = 'exit';
+      } else if (rule === 'force_exit') {
+        mode = 'exit';
+        hasPerevakhtovka = true;
+        ruleLabel = 'Сдвиг (выезд 17-го)';
+        nextExpectedPhase = 'enter';
+      } else {
+        // Standard seamless 30/30 alternation
+        mode = nextExpectedPhase;
+        nextExpectedPhase = mode === 'enter' ? 'exit' : 'enter';
+      }
+
+      allYears[year][m] = {
+        mode,
+        hasPerevakhtovka,
+        ruleLabel,
+        days: buildMonthDays(year, m, mode),
+      };
+    }
+  }
+
+  return allYears;
 }
 
 export function isDateInVacations(iso: string, vacations: VacationRange[]): boolean {
@@ -329,13 +519,16 @@ export function getBaseShift(
   year: number,
   monthIndex: number,
   day: number,
-  vacations: VacationRange[]
+  vacations: VacationRange[],
+  rotationRules: RotationRulesMap = DEFAULT_ROTATION_RULES,
+  precomputedBase?: Record<number, Record<number, ComputedMonthPattern>>
 ): ShiftCode {
   const iso = toIsoDate(year, monthIndex, day);
   if (isDateInVacations(iso, vacations)) {
     return 'o';
   }
-  return getTemplateShift(monthIndex, day);
+  const base = precomputedBase ?? buildMultiYearBaseSchedule(rotationRules);
+  return base[year]?.[monthIndex]?.days[day] ?? 'v';
 }
 
 export function getEffectiveShift(
@@ -343,26 +536,31 @@ export function getEffectiveShift(
   monthIndex: number,
   day: number,
   vacations: VacationRange[],
-  overrides: DayOverrideMap
+  overrides: DayOverrideMap,
+  rotationRules: RotationRulesMap = DEFAULT_ROTATION_RULES,
+  precomputedBase?: Record<number, Record<number, ComputedMonthPattern>>
 ): ShiftCode {
   const iso = toIsoDate(year, monthIndex, day);
   if (overrides[iso]) {
     return overrides[iso];
   }
-  return getBaseShift(year, monthIndex, day, vacations);
+  return getBaseShift(year, monthIndex, day, vacations, rotationRules, precomputedBase);
 }
 
 export function getYearSchedule(
   year: number,
   vacations: VacationRange[],
-  overrides: DayOverrideMap
+  overrides: DayOverrideMap,
+  rotationRules: RotationRulesMap = DEFAULT_ROTATION_RULES,
+  precomputedBase?: Record<number, Record<number, ComputedMonthPattern>>
 ): Record<number, Record<number, ShiftCode>> {
+  const base = precomputedBase ?? buildMultiYearBaseSchedule(rotationRules);
   const schedule: Record<number, Record<number, ShiftCode>> = {};
   for (let m = 0; m < 12; m++) {
     schedule[m] = {};
     const daysCount = getDaysInMonth(year, m);
     for (let d = 1; d <= daysCount; d++) {
-      schedule[m][d] = getEffectiveShift(year, m, d, vacations, overrides);
+      schedule[m][d] = getEffectiveShift(year, m, d, vacations, overrides, rotationRules, base);
     }
   }
   return schedule;
@@ -371,8 +569,11 @@ export function getYearSchedule(
 export function getYearStats(
   year: number,
   vacations: VacationRange[],
-  overrides: DayOverrideMap
+  overrides: DayOverrideMap,
+  rotationRules: RotationRulesMap = DEFAULT_ROTATION_RULES,
+  precomputedBase?: Record<number, Record<number, ComputedMonthPattern>>
 ): YearStats {
+  const base = precomputedBase ?? buildMultiYearBaseSchedule(rotationRules);
   const counts: Record<ShiftCode, number> = { v: 0, d: 0, y: 0, n: 0, o: 0 };
   let totalHours = 0;
   let workDays = 0;
@@ -381,7 +582,7 @@ export function getYearStats(
   for (let m = 0; m < 12; m++) {
     const daysCount = getDaysInMonth(year, m);
     for (let d = 1; d <= daysCount; d++) {
-      const code = getEffectiveShift(year, m, d, vacations, overrides);
+      const code = getEffectiveShift(year, m, d, vacations, overrides, rotationRules, base);
       counts[code]++;
       totalHours += SHIFT_TYPES[code].hours;
       if (SHIFT_TYPES[code].isWork) workDays++;
@@ -395,8 +596,11 @@ export function getYearStats(
 export function getMonthlyBreakdown(
   year: number,
   vacations: VacationRange[],
-  overrides: DayOverrideMap
+  overrides: DayOverrideMap,
+  rotationRules: RotationRulesMap = DEFAULT_ROTATION_RULES,
+  precomputedBase?: Record<number, Record<number, ComputedMonthPattern>>
 ): MonthStats[] {
+  const base = precomputedBase ?? buildMultiYearBaseSchedule(rotationRules);
   const result: MonthStats[] = [];
 
   for (let m = 0; m < 12; m++) {
@@ -406,7 +610,7 @@ export function getMonthlyBreakdown(
     const daysInMonth = getDaysInMonth(year, m);
 
     for (let d = 1; d <= daysInMonth; d++) {
-      const code = getEffectiveShift(year, m, d, vacations, overrides);
+      const code = getEffectiveShift(year, m, d, vacations, overrides, rotationRules, base);
       counts[code]++;
       totalHours += SHIFT_TYPES[code].hours;
       if (SHIFT_TYPES[code].isWork) workDays++;
@@ -434,8 +638,11 @@ function shiftToCategory(code: ShiftCode): BlockCategory {
 export function getYearRotationBlocks(
   year: number,
   vacations: VacationRange[],
-  overrides: DayOverrideMap
+  overrides: DayOverrideMap,
+  rotationRules: RotationRulesMap = DEFAULT_ROTATION_RULES,
+  precomputedBase?: Record<number, Record<number, ComputedMonthPattern>>
 ): RotationBlock[] {
+  const base = precomputedBase ?? buildMultiYearBaseSchedule(rotationRules);
   const blocks: RotationBlock[] = [];
   let current: RotationBlock | null = null;
   let workCounter = 0;
@@ -446,7 +653,7 @@ export function getYearRotationBlocks(
     const daysCount = getDaysInMonth(year, m);
     for (let d = 1; d <= daysCount; d++) {
       const iso = toIsoDate(year, m, d);
-      const code = getEffectiveShift(year, m, d, vacations, overrides);
+      const code = getEffectiveShift(year, m, d, vacations, overrides, rotationRules, base);
       const category = shiftToCategory(code);
 
       if (!current || current.category !== category) {
@@ -497,9 +704,12 @@ export function getDayBlockContext(
   monthIndex: number,
   day: number,
   vacations: VacationRange[],
-  overrides: DayOverrideMap
+  overrides: DayOverrideMap,
+  rotationRules: RotationRulesMap = DEFAULT_ROTATION_RULES,
+  precomputedBase?: Record<number, Record<number, ComputedMonthPattern>>
 ): DayBlockContext {
-  const targetCode = getEffectiveShift(year, monthIndex, day, vacations, overrides);
+  const base = precomputedBase ?? buildMultiYearBaseSchedule(rotationRules);
+  const targetCode = getEffectiveShift(year, monthIndex, day, vacations, overrides, rotationRules, base);
   const category = shiftToCategory(targetCode);
 
   let start = { year, month: monthIndex, day };
@@ -507,7 +717,7 @@ export function getDayBlockContext(
   for (let step = 1; step <= 60; step++) {
     const prev = addDaysUtc(year, monthIndex, day, -step);
     if (prev.year < 2027 || prev.year > 2030) break;
-    const prevCode = getEffectiveShift(prev.year, prev.month, prev.day, vacations, overrides);
+    const prevCode = getEffectiveShift(prev.year, prev.month, prev.day, vacations, overrides, rotationRules, base);
     if (shiftToCategory(prevCode) !== category) break;
     start = prev;
     beforeCount++;
@@ -518,7 +728,7 @@ export function getDayBlockContext(
   for (let step = 1; step <= 60; step++) {
     const next = addDaysUtc(year, monthIndex, day, step);
     if (next.year < 2027 || next.year > 2030) break;
-    const nextCode = getEffectiveShift(next.year, next.month, next.day, vacations, overrides);
+    const nextCode = getEffectiveShift(next.year, next.month, next.day, vacations, overrides, rotationRules, base);
     if (shiftToCategory(nextCode) !== category) break;
     end = next;
     afterCount++;
@@ -528,7 +738,7 @@ export function getDayBlockContext(
   let blockHours = 0;
   for (let i = 0; i < totalDaysInBlock; i++) {
     const cur = addDaysUtc(start.year, start.month, start.day, i);
-    const code = getEffectiveShift(cur.year, cur.month, cur.day, vacations, overrides);
+    const code = getEffectiveShift(cur.year, cur.month, cur.day, vacations, overrides, rotationRules, base);
     blockHours += SHIFT_TYPES[code].hours;
   }
 

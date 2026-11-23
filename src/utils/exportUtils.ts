@@ -2,9 +2,11 @@ import {
   DayNotesMap,
   DayOverrideMap,
   OWNER_INFO,
+  RotationRulesMap,
   SHIFT_TYPES,
   ShiftCode,
   VacationRange,
+  buildMultiYearBaseSchedule,
   getDaysInMonth,
   getEffectiveShift,
   getMonthlyBreakdown,
@@ -34,14 +36,16 @@ export interface IcsExportOptions {
   vacations: VacationRange[];
   overrides: DayOverrideMap;
   notes: DayNotesMap;
+  rotationRules: RotationRulesMap;
 }
 
 export function buildIcsCalendar(options: IcsExportOptions): string {
-  const { year, includeTypes, vacations, overrides, notes } = options;
+  const { year, includeTypes, vacations, overrides, notes, rotationRules } = options;
+  const baseSchedule = buildMultiYearBaseSchedule(rotationRules);
   const lines: string[] = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Vakhta Schedule//RU',
+    'PRODID:-//MYCalendar Vakhta//RU',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     `X-WR-CALNAME:${escapeIcsText(`Вахта ${year} · ${OWNER_INFO.shortName}`)}`,
@@ -52,7 +56,7 @@ export function buildIcsCalendar(options: IcsExportOptions): string {
   for (let m = 0; m < 12; m++) {
     const daysCount = getDaysInMonth(year, m);
     for (let d = 1; d <= daysCount; d++) {
-      const code = getEffectiveShift(year, m, d, vacations, overrides);
+      const code = getEffectiveShift(year, m, d, vacations, overrides, rotationRules, baseSchedule);
       if (!includeTypes[code]) continue;
 
       const meta = SHIFT_TYPES[code];
@@ -86,9 +90,10 @@ export function buildIcsCalendar(options: IcsExportOptions): string {
 export function buildMonthlyCsv(
   year: number,
   vacations: VacationRange[],
-  overrides: DayOverrideMap
+  overrides: DayOverrideMap,
+  rotationRules: RotationRulesMap
 ): string {
-  const breakdown = getMonthlyBreakdown(year, vacations, overrides);
+  const breakdown = getMonthlyBreakdown(year, vacations, overrides, rotationRules);
   const header = [
     'Месяц',
     'Дневные (11 ч)',
@@ -129,8 +134,10 @@ export function buildDailyCsv(
   year: number,
   vacations: VacationRange[],
   overrides: DayOverrideMap,
-  notes: DayNotesMap
+  notes: DayNotesMap,
+  rotationRules: RotationRulesMap
 ): string {
+  const baseSchedule = buildMultiYearBaseSchedule(rotationRules);
   const header = ['Дата', 'Код', 'Тип дня', 'Часы', 'Заметка'];
   const rows: string[][] = [];
 
@@ -138,7 +145,7 @@ export function buildDailyCsv(
     const daysCount = getDaysInMonth(year, m);
     for (let d = 1; d <= daysCount; d++) {
       const iso = toIsoDate(year, m, d);
-      const code = getEffectiveShift(year, m, d, vacations, overrides);
+      const code = getEffectiveShift(year, m, d, vacations, overrides, rotationRules, baseSchedule);
       const meta = SHIFT_TYPES[code];
       const note = (notes[iso] ?? '').replace(/;/g, ',').replace(/\r?\n/g, ' ');
       rows.push([iso, meta.shortCode, meta.label, String(meta.hours), note]);

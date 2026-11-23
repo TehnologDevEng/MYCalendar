@@ -3,6 +3,7 @@ import { Calendar, Download, FileSpreadsheet, Printer, X } from 'lucide-react';
 import {
   DayNotesMap,
   DayOverrideMap,
+  RotationRulesMap,
   SHIFT_ORDER,
   SHIFT_TYPES,
   ShiftCode,
@@ -20,6 +21,7 @@ interface ExportModalProps {
   vacations: VacationRange[];
   overrides: DayOverrideMap;
   notes: DayNotesMap;
+  rotationRules: RotationRulesMap;
   onClose: () => void;
 }
 
@@ -28,6 +30,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   vacations,
   overrides,
   notes,
+  rotationRules,
   onClose,
 }) => {
   const [includeTypes, setIncludeTypes] = useState<Record<ShiftCode, boolean>>({
@@ -60,6 +63,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       vacations,
       overrides,
       notes,
+      rotationRules,
     });
     triggerFileDownload(
       ics,
@@ -69,7 +73,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   };
 
   const handleDownloadMonthlyCsv = () => {
-    const csv = buildMonthlyCsv(year, vacations, overrides);
+    const csv = buildMonthlyCsv(year, vacations, overrides, rotationRules);
     triggerFileDownload(
       csv,
       `vakhta_svodka_${year}.csv`,
@@ -78,7 +82,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   };
 
   const handleDownloadDailyCsv = () => {
-    const csv = buildDailyCsv(year, vacations, overrides, notes);
+    const csv = buildDailyCsv(year, vacations, overrides, notes, rotationRules);
     triggerFileDownload(
       csv,
       `vakhta_dnevnik_${year}.csv`,

@@ -12,17 +12,22 @@ import {
   X,
 } from 'lucide-react';
 import {
+  DEFAULT_ROTATION_RULES,
   DEFAULT_VACATIONS,
   DayNotesMap,
   DayOverrideMap,
+  MONTHS,
   MONTHS_SHORT,
   OWNER_INFO,
+  RotationRuleType,
+  RotationRulesMap,
   SHIFT_ORDER,
   SHIFT_TYPES,
   ScheduleYear,
   ShiftCode,
   VacationRange,
   YEARS,
+  buildMultiYearBaseSchedule,
   countDaysInclusive,
   formatNumericDate,
   getBaseShift,
@@ -49,6 +54,7 @@ type ActiveTab = 'calendar' | 'rotations' | 'vacations' | 'summary';
 
 const STORAGE_KEYS = {
   vacations: 'vakhta_nosar_vacations_v1',
+  rotationRules: 'vakhta_nosar_rotation_rules_v1',
   overrides: 'vakhta_nosar_overrides_v1',
   notes: 'vakhta_nosar_notes_v1',
   showCodes: 'vakhta_nosar_show_codes_v1',
@@ -88,6 +94,9 @@ export default function App() {
   const [vacations, setVacations] = useState<VacationRange[]>(() =>
     loadJson<VacationRange[]>(STORAGE_KEYS.vacations, DEFAULT_VACATIONS)
   );
+  const [rotationRules, setRotationRules] = useState<RotationRulesMap>(() =>
+    loadJson<RotationRulesMap>(STORAGE_KEYS.rotationRules, DEFAULT_ROTATION_RULES)
+  );
   const [overrides, setOverrides] = useState<DayOverrideMap>(() =>
     loadJson<DayOverrideMap>(STORAGE_KEYS.overrides, {})
   );
@@ -97,12 +106,16 @@ export default function App() {
 
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [highlightedMonth, setHighlightedMonth] = useState<number | null>(null);
-  const [lookupDate, setLookupDate] = useState<string>('2027-01-16');
+  const [lookupDate, setLookupDate] = useState<string>('2028-09-15');
   const [exportOpen, setExportOpen] = useState(false);
 
   useEffect(() => {
     saveJson(STORAGE_KEYS.vacations, vacations);
   }, [vacations]);
+
+  useEffect(() => {
+    saveJson(STORAGE_KEYS.rotationRules, rotationRules);
+  }, [rotationRules]);
 
   useEffect(() => {
     saveJson(STORAGE_KEYS.overrides, overrides);
@@ -120,24 +133,29 @@ export default function App() {
     saveJson(STORAGE_KEYS.sidebarCollapsed, isSidebarCollapsed);
   }, [isSidebarCollapsed]);
 
+  const baseSchedule = useMemo(
+    () => buildMultiYearBaseSchedule(rotationRules),
+    [rotationRules]
+  );
+
   const scheduleByMonth = useMemo(
-    () => getYearSchedule(year, vacations, overrides),
-    [year, vacations, overrides]
+    () => getYearSchedule(year, vacations, overrides, rotationRules, baseSchedule),
+    [year, vacations, overrides, rotationRules, baseSchedule]
   );
 
   const stats = useMemo(
-    () => getYearStats(year, vacations, overrides),
-    [year, vacations, overrides]
+    () => getYearStats(year, vacations, overrides, rotationRules, baseSchedule),
+    [year, vacations, overrides, rotationRules, baseSchedule]
   );
 
   const monthlyBreakdown = useMemo(
-    () => getMonthlyBreakdown(year, vacations, overrides),
-    [year, vacations, overrides]
+    () => getMonthlyBreakdown(year, vacations, overrides, rotationRules, baseSchedule),
+    [year, vacations, overrides, rotationRules, baseSchedule]
   );
 
   const rotationBlocks = useMemo(
-    () => getYearRotationBlocks(year, vacations, overrides),
-    [year, vacations, overrides]
+    () => getYearRotationBlocks(year, vacations, overrides, rotationRules, baseSchedule),
+    [year, vacations, overrides, rotationRules, baseSchedule]
   );
 
   const yearVacations = useMemo(() => {
@@ -148,24 +166,51 @@ export default function App() {
       .sort((a, b) => a.startDate.localeCompare(b.startDate));
   }, [year, vacations]);
 
+  const yearPerevakhtovki = useMemo(() => {
+    const patterns = baseSchedule[year] ?? {};
+    const list: { monthIndex: number; label: string }[] = [];
+    for (let m = 0; m < 12; m++) {
+      if (patterns[m]?.hasPerevakhtovka && patterns[m]?.ruleLabel) {
+        list.push({ monthIndex: m, label: `${MONTHS[m]} (${patterns[m].ruleLabel})` });
+      }
+    }
+    return list;
+  }, [baseSchedule, year]);
+
   // Quick date checker result
   const lookupResult = useMemo(() => {
     if (!lookupDate || lookupDate < '2027-01-01' || lookupDate > '2030-12-31') {
       return null;
     }
     const { year: ly, month: lm, day: ld } = parseIsoDate(lookupDate);
-    const code = getEffectiveShift(ly, lm, ld, vacations, overrides);
-    const block = getDayBlockContext(ly, lm, ld, vacations, overrides);
+    const code = getEffectiveShift(ly, lm, ld, vacations, overrides, rotationRules, baseSchedule);
+    const block = getDayBlockContext(ly, lm, ld, vacations, overrides, rotationRules, baseSchedule);
     return { code, meta: SHIFT_TYPES[code], block, year: ly, month: lm, day: ld };
-  }, [lookupDate, vacations, overrides]);
+  }, [lookupDate, vacations, overrides, rotationRules, baseSchedule]);
 
   // Selected day modal details
   const selectedDayInfo = useMemo(() => {
     if (!selectedDate) return null;
     const { year: sy, month: sm, day: sd } = parseIsoDate(selectedDate);
-    const effectiveCode = getEffectiveShift(sy, sm, sd, vacations, overrides);
-    const baseCode = getBaseShift(sy, sm, sd, vacations);
-    const blockContext = getDayBlockContext(sy, sm, sd, vacations, overrides);
+    const effectiveCode = getEffectiveShift(
+      sy,
+      sm,
+      sd,
+      vacations,
+      overrides,
+      rotationRules,
+      baseSchedule
+    );
+    const baseCode = getBaseShift(sy, sm, sd, vacations, rotationRules, baseSchedule);
+    const blockContext = getDayBlockContext(
+      sy,
+      sm,
+      sd,
+      vacations,
+      overrides,
+      rotationRules,
+      baseSchedule
+    );
     return {
       isoDate: selectedDate,
       effectiveCode,
@@ -174,7 +219,7 @@ export default function App() {
       blockContext,
       note: notes[selectedDate] ?? '',
     };
-  }, [selectedDate, vacations, overrides, notes]);
+  }, [selectedDate, vacations, overrides, notes, rotationRules, baseSchedule]);
 
   const handleJumpToDate = (isoDate: string) => {
     const { year: targetYear, month: targetMonth } = parseIsoDate(isoDate);
@@ -244,12 +289,25 @@ export default function App() {
     setVacations((prev) => prev.filter((v) => v.id !== id));
   };
 
+  const handleSetRotationRule = (ymKey: string, rule: RotationRuleType) => {
+    setRotationRules((prev) => ({ ...prev, [ymKey]: rule }));
+  };
+
+  const handleDeleteRotationRule = (ymKey: string) => {
+    setRotationRules((prev) => {
+      const copy = { ...prev };
+      delete copy[ymKey];
+      return copy;
+    });
+  };
+
   const handleDownloadMonthlyCsv = () => {
-    const csv = buildMonthlyCsv(year, vacations, overrides);
+    const csv = buildMonthlyCsv(year, vacations, overrides, rotationRules);
     triggerFileDownload(csv, `vakhta_svodka_${year}.csv`, 'text/csv;charset=utf-8');
   };
 
   const overridesCount = Object.keys(overrides).length;
+  const rulesCount = Object.keys(rotationRules).length;
   const notesCount = Object.values(notes).filter((v) => v.trim().length > 0).length;
 
   const navItems: {
@@ -263,10 +321,10 @@ export default function App() {
     { id: 'rotations', label: 'Список вахт', shortLabel: 'Вахты', icon: ListChecks },
     {
       id: 'vacations',
-      label: 'Отпуска и правки',
+      label: 'Перевахтовки и отпуска',
       shortLabel: 'Отпуска',
       icon: CalendarRange,
-      count: vacations.length + overridesCount,
+      count: vacations.length + rulesCount + overridesCount,
     },
     { id: 'summary', label: 'Сводка 2027–2030', shortLabel: 'Сводка', icon: Table2 },
   ];
@@ -304,7 +362,7 @@ export default function App() {
 
   const renderToolsContent = (collapsed = false) => (
     <div className="flex flex-col h-full">
-      {/* Brand header + collapse toggle (MYPlaner signature style) */}
+      {/* Brand header + collapse toggle */}
       <div
         className={`pt-5 pb-4 border-b border-[#222222] flex items-center text-[#F7F8F8] ${
           collapsed ? 'justify-center px-2 flex-col gap-3' : 'justify-between px-4'
@@ -322,7 +380,7 @@ export default function App() {
         </button>
       </div>
 
-      {/* Navigation (desktop & tablet sidebar) */}
+      {/* Navigation */}
       <nav className="hidden md:block p-2.5 space-y-1 border-b border-[#222222]">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -458,7 +516,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* Owner profile footer (MYPlaner style) */}
+          {/* Owner profile footer */}
           <div className="px-4 py-3.5 pb-[calc(0.875rem+env(safe-area-inset-bottom))] md:pb-3.5 border-t border-[#222222] bg-[#0B0B0C]">
             <div className="text-xs font-medium text-[#F7F8F8] truncate">
               {OWNER_INFO.fullName}
@@ -508,7 +566,7 @@ export default function App() {
         {renderToolsContent(isSidebarCollapsed)}
       </aside>
 
-      {/* Mobile Tools Drawer (Date Check, Shift Legend, Owner Info) */}
+      {/* Mobile Tools Drawer */}
       {mobileToolsOpen && (
         <div
           className="fixed inset-0 z-40 md:hidden bg-black/75 backdrop-blur-xs flex"
@@ -579,8 +637,8 @@ export default function App() {
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#F7F8F8]">
                 График вахты на {year} год
               </h1>
-              <p className="text-xs sm:text-sm text-[#8A8F98] mt-0.5 sm:mt-1">
-                {yearVacations.length > 0 ? (
+              <p className="text-xs sm:text-sm text-[#8A8F98] mt-0.5 sm:mt-1 leading-relaxed">
+                {yearVacations.length > 0 && (
                   <>
                     Отпуска:{' '}
                     {yearVacations.map((vac, i) => (
@@ -595,8 +653,19 @@ export default function App() {
                       </span>
                     ))}
                   </>
-                ) : (
-                  <>Стандартный цикл перевахтовки · {stats.totalDays} календарных дней</>
+                )}
+                {yearVacations.length > 0 && yearPerevakhtovki.length > 0 && ' · '}
+                {yearPerevakhtovki.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('vacations')}
+                    className="text-[#00BCC5] hover:underline cursor-pointer text-left"
+                  >
+                    {yearPerevakhtovki.map((p) => p.label).join(', ')}
+                  </button>
+                )}
+                {yearVacations.length === 0 && yearPerevakhtovki.length === 0 && (
+                  <>Непрерывный цикл 30/30 · {stats.totalDays} календарных дней</>
                 )}
               </p>
             </div>
@@ -642,7 +711,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* KPI Summary Strip (uniform 1px obsidian grid hairlines) */}
+          {/* KPI Summary Strip */}
           <section
             aria-label="Годовая статистика смен"
             className="rounded-xl border border-[#222226] overflow-hidden bg-[#222226] grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-px"
@@ -788,6 +857,7 @@ export default function App() {
             <YearCalendarView
               year={year}
               scheduleByMonth={scheduleByMonth}
+              monthPatterns={baseSchedule[year]}
               activeFilter={activeFilter}
               showCellCodes={showCellCodes}
               selectedDate={selectedDate}
@@ -810,11 +880,15 @@ export default function App() {
             <VacationsAndEditsView
               year={year}
               vacations={vacations}
+              rotationRules={rotationRules}
               overrides={overrides}
               notes={notes}
               onAddVacation={handleAddVacation}
               onDeleteVacation={handleDeleteVacation}
               onResetVacations={() => setVacations(DEFAULT_VACATIONS)}
+              onSetRotationRule={handleSetRotationRule}
+              onDeleteRotationRule={handleDeleteRotationRule}
+              onResetRotationRules={() => setRotationRules(DEFAULT_ROTATION_RULES)}
               onRemoveOverride={handleResetOverride}
               onClearAllOverrides={() => setOverrides({})}
               onDeleteNote={(iso) => handleSaveNote(iso, '')}
@@ -828,6 +902,8 @@ export default function App() {
               monthlyBreakdown={monthlyBreakdown}
               vacations={vacations}
               overrides={overrides}
+              rotationRules={rotationRules}
+              baseSchedule={baseSchedule}
               onSelectYear={(y) => setYear(y)}
               onDownloadMonthlyCsv={handleDownloadMonthlyCsv}
             />
@@ -835,7 +911,7 @@ export default function App() {
         </main>
       </div>
 
-      {/* Fixed Mobile Bottom Navigation Bar (exact MYPlaner 56px obsidian pattern) */}
+      {/* Fixed Mobile Bottom Navigation Bar */}
       <nav
         aria-label="Основная навигация"
         className="md:hidden fixed bottom-0 left-0 right-0 h-14 bg-[#0E0E10]/95 backdrop-blur-md border-t border-[#222226] z-30 flex items-center justify-around px-1 pb-[env(safe-area-inset-bottom)] no-print"
@@ -894,6 +970,7 @@ export default function App() {
           vacations={vacations}
           overrides={overrides}
           notes={notes}
+          rotationRules={rotationRules}
           onClose={() => setExportOpen(false)}
         />
       )}

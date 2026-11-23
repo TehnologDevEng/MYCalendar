@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  ComputedMonthPattern,
   DOW_SHORT,
   DayNotesMap,
   DayOverrideMap,
@@ -16,6 +17,7 @@ import { SHIFT_STYLES } from '../data/shiftStyles';
 interface YearCalendarViewProps {
   year: number;
   scheduleByMonth: Record<number, Record<number, ShiftCode>>;
+  monthPatterns: Record<number, ComputedMonthPattern>;
   activeFilter: ShiftCode | 'all';
   showCellCodes: boolean;
   selectedDate: string | null;
@@ -28,6 +30,7 @@ interface YearCalendarViewProps {
 export const YearCalendarView: React.FC<YearCalendarViewProps> = ({
   year,
   scheduleByMonth,
+  monthPatterns,
   activeFilter,
   showCellCodes,
   selectedDate,
@@ -48,16 +51,23 @@ export const YearCalendarView: React.FC<YearCalendarViewProps> = ({
       {/* Quick horizontal month jumper for phones */}
       <div className="md:hidden -mx-3 px-3 overflow-x-auto no-print">
         <div className="inline-flex items-center gap-1.5 py-0.5">
-          {MONTHS_SHORT.map((shortName, mIdx) => (
-            <button
-              key={shortName}
-              type="button"
-              onClick={() => scrollToMonth(mIdx)}
-              className="min-h-[38px] px-3 rounded-lg bg-[#0E0E0F] border border-[#222226] text-xs font-medium text-[#8A8F98] active:bg-[#00BCC5] active:text-black active:border-[#00BCC5] capitalize whitespace-nowrap shrink-0 cursor-pointer transition-colors"
-            >
-              {shortName}
-            </button>
-          ))}
+          {MONTHS_SHORT.map((shortName, mIdx) => {
+            const hasRule = monthPatterns[mIdx]?.hasPerevakhtovka;
+            return (
+              <button
+                key={shortName}
+                type="button"
+                onClick={() => scrollToMonth(mIdx)}
+                className={`min-h-[38px] px-3 rounded-lg bg-[#0E0E0F] border text-xs font-medium active:bg-[#00BCC5] active:text-black active:border-[#00BCC5] capitalize whitespace-nowrap shrink-0 cursor-pointer transition-colors ${
+                  hasRule
+                    ? 'border-[#00BCC5]/50 text-[#00BCC5]'
+                    : 'border-[#222226] text-[#8A8F98]'
+                }`}
+              >
+                {shortName}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -66,6 +76,7 @@ export const YearCalendarView: React.FC<YearCalendarViewProps> = ({
           const daysCount = getDaysInMonth(year, monthIndex);
           const startOffset = getDayOfWeekIndex(year, monthIndex, 1);
           const monthSchedule = scheduleByMonth[monthIndex];
+          const pattern = monthPatterns[monthIndex];
 
           let monthHours = 0;
           let monthWorkDays = 0;
@@ -84,14 +95,23 @@ export const YearCalendarView: React.FC<YearCalendarViewProps> = ({
               className={`scroll-mt-16 bg-[#0E0E0F] rounded-xl border p-3 sm:p-4 transition-colors ${
                 isFocusedMonth
                   ? 'border-[#00BCC5] ring-1 ring-[#00BCC5]/40'
+                  : pattern?.hasPerevakhtovka
+                  ? 'border-[#00BCC5]/45'
                   : 'border-[#222226] hover:border-[#2E2E34]'
               }`}
             >
               <div className="flex items-baseline justify-between gap-2 mb-2.5 sm:mb-3 pb-2.5 border-b border-[#1D1D21]">
-                <h2 className="text-[15px] font-semibold text-[#F7F8F8]">
-                  {monthName}
-                </h2>
-                <div className="text-xs font-mono tabular-nums text-[#8A8F98] whitespace-nowrap">
+                <div className="flex items-baseline gap-2 min-w-0">
+                  <h2 className="text-[15px] font-semibold text-[#F7F8F8] truncate">
+                    {monthName}
+                  </h2>
+                  {pattern?.ruleLabel && (
+                    <span className="text-[11px] font-medium text-[#00BCC5] truncate">
+                      {pattern.ruleLabel}
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs font-mono tabular-nums text-[#8A8F98] whitespace-nowrap shrink-0">
                   {monthHours} ч · {monthWorkDays} смен
                 </div>
               </div>
