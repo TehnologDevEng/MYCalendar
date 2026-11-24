@@ -1,4 +1,5 @@
 import React from 'react';
+import { SlidersHorizontal } from 'lucide-react';
 import {
   ComputedMonthPattern,
   DOW_SHORT,
@@ -25,6 +26,7 @@ interface YearCalendarViewProps {
   overrides: DayOverrideMap;
   notes: DayNotesMap;
   onSelectDay: (isoDate: string) => void;
+  onEditMonth: (monthIndex: number) => void;
 }
 
 export const YearCalendarView: React.FC<YearCalendarViewProps> = ({
@@ -38,6 +40,7 @@ export const YearCalendarView: React.FC<YearCalendarViewProps> = ({
   overrides,
   notes,
   onSelectDay,
+  onEditMonth,
 }) => {
   const scrollToMonth = (monthIndex: number) => {
     const el = document.getElementById(`month-card-${monthIndex}`);
@@ -52,14 +55,15 @@ export const YearCalendarView: React.FC<YearCalendarViewProps> = ({
       <div className="md:hidden -mx-3 px-3 overflow-x-auto no-print">
         <div className="inline-flex items-center gap-1.5 py-0.5">
           {MONTHS_SHORT.map((shortName, mIdx) => {
-            const hasRule = monthPatterns[mIdx]?.hasPerevakhtovka;
+            const p = monthPatterns[mIdx];
+            const isHighlighted = p?.hasPerevakhtovka || p?.isCustomMonth;
             return (
               <button
                 key={shortName}
                 type="button"
                 onClick={() => scrollToMonth(mIdx)}
                 className={`min-h-[38px] px-3 rounded-lg bg-[#0E0E0F] border text-xs font-medium active:bg-[#00BCC5] active:text-black active:border-[#00BCC5] capitalize whitespace-nowrap shrink-0 cursor-pointer transition-colors ${
-                  hasRule
+                  isHighlighted
                     ? 'border-[#00BCC5]/50 text-[#00BCC5]'
                     : 'border-[#222226] text-[#8A8F98]'
                 }`}
@@ -87,6 +91,7 @@ export const YearCalendarView: React.FC<YearCalendarViewProps> = ({
           }
 
           const isFocusedMonth = highlightedMonth === monthIndex;
+          const hasAccentBorder = pattern?.hasPerevakhtovka || pattern?.isCustomMonth;
 
           return (
             <section
@@ -95,24 +100,35 @@ export const YearCalendarView: React.FC<YearCalendarViewProps> = ({
               className={`scroll-mt-16 bg-[#0E0E0F] rounded-xl border p-3 sm:p-4 transition-colors ${
                 isFocusedMonth
                   ? 'border-[#00BCC5] ring-1 ring-[#00BCC5]/40'
-                  : pattern?.hasPerevakhtovka
+                  : hasAccentBorder
                   ? 'border-[#00BCC5]/45'
                   : 'border-[#222226] hover:border-[#2E2E34]'
               }`}
             >
-              <div className="flex items-baseline justify-between gap-2 mb-2.5 sm:mb-3 pb-2.5 border-b border-[#1D1D21]">
+              <div className="flex items-center justify-between gap-2 mb-2.5 sm:mb-3 pb-2.5 border-b border-[#1D1D21]">
                 <div className="flex items-baseline gap-2 min-w-0">
                   <h2 className="text-[15px] font-semibold text-[#F7F8F8] truncate">
                     {monthName}
                   </h2>
-                  {pattern?.ruleLabel && (
+                  {pattern?.badgeText && (
                     <span className="text-[11px] font-medium text-[#00BCC5] truncate">
-                      {pattern.ruleLabel}
+                      {pattern.badgeText}
                     </span>
                   )}
                 </div>
-                <div className="text-xs font-mono tabular-nums text-[#8A8F98] whitespace-nowrap shrink-0">
-                  {monthHours} ч · {monthWorkDays} смен
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs font-mono tabular-nums text-[#8A8F98] whitespace-nowrap">
+                    {monthHours} ч · {monthWorkDays} смен
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onEditMonth(monthIndex)}
+                    title={`Настроить рабочие дни: ${monthName} ${year}`}
+                    aria-label={`Настроить рабочие дни за ${monthName} ${year}`}
+                    className="no-print w-7 h-7 flex items-center justify-center rounded-md text-[#666] hover:text-[#00BCC5] hover:bg-[#1A1A1C] transition-colors cursor-pointer"
+                  >
+                    <SlidersHorizontal className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
 

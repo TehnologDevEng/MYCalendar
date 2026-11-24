@@ -1,12 +1,11 @@
 import {
+  ComputedMonthPattern,
   DayNotesMap,
   DayOverrideMap,
   OWNER_INFO,
-  RotationRulesMap,
   SHIFT_TYPES,
   ShiftCode,
   VacationRange,
-  buildMultiYearBaseSchedule,
   getDaysInMonth,
   getEffectiveShift,
   getMonthlyBreakdown,
@@ -36,12 +35,11 @@ export interface IcsExportOptions {
   vacations: VacationRange[];
   overrides: DayOverrideMap;
   notes: DayNotesMap;
-  rotationRules: RotationRulesMap;
+  baseSchedule: Record<number, Record<number, ComputedMonthPattern>>;
 }
 
 export function buildIcsCalendar(options: IcsExportOptions): string {
-  const { year, includeTypes, vacations, overrides, notes, rotationRules } = options;
-  const baseSchedule = buildMultiYearBaseSchedule(rotationRules);
+  const { year, includeTypes, vacations, overrides, notes, baseSchedule } = options;
   const lines: string[] = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
@@ -56,7 +54,7 @@ export function buildIcsCalendar(options: IcsExportOptions): string {
   for (let m = 0; m < 12; m++) {
     const daysCount = getDaysInMonth(year, m);
     for (let d = 1; d <= daysCount; d++) {
-      const code = getEffectiveShift(year, m, d, vacations, overrides, rotationRules, baseSchedule);
+      const code = getEffectiveShift(year, m, d, vacations, overrides, baseSchedule);
       if (!includeTypes[code]) continue;
 
       const meta = SHIFT_TYPES[code];
@@ -91,9 +89,9 @@ export function buildMonthlyCsv(
   year: number,
   vacations: VacationRange[],
   overrides: DayOverrideMap,
-  rotationRules: RotationRulesMap
+  baseSchedule: Record<number, Record<number, ComputedMonthPattern>>
 ): string {
-  const breakdown = getMonthlyBreakdown(year, vacations, overrides, rotationRules);
+  const breakdown = getMonthlyBreakdown(year, vacations, overrides, baseSchedule);
   const header = [
     'Месяц',
     'Дневные (11 ч)',
@@ -135,9 +133,8 @@ export function buildDailyCsv(
   vacations: VacationRange[],
   overrides: DayOverrideMap,
   notes: DayNotesMap,
-  rotationRules: RotationRulesMap
+  baseSchedule: Record<number, Record<number, ComputedMonthPattern>>
 ): string {
-  const baseSchedule = buildMultiYearBaseSchedule(rotationRules);
   const header = ['Дата', 'Код', 'Тип дня', 'Часы', 'Заметка'];
   const rows: string[][] = [];
 
@@ -145,7 +142,7 @@ export function buildDailyCsv(
     const daysCount = getDaysInMonth(year, m);
     for (let d = 1; d <= daysCount; d++) {
       const iso = toIsoDate(year, m, d);
-      const code = getEffectiveShift(year, m, d, vacations, overrides, rotationRules, baseSchedule);
+      const code = getEffectiveShift(year, m, d, vacations, overrides, baseSchedule);
       const meta = SHIFT_TYPES[code];
       const note = (notes[iso] ?? '').replace(/;/g, ',').replace(/\r?\n/g, ' ');
       rows.push([iso, meta.shortCode, meta.label, String(meta.hours), note]);

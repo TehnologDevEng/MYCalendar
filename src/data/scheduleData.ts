@@ -2,54 +2,49 @@ export type ShiftCode = 'v' | 'd' | 'y' | 'n' | 'o';
 
 export type MonthHalfPhase = 'enter' | 'exit';
 
-export type RotationRuleType =
-  | 'short_exit'
-  | 'short_exit_flip'
-  | 'force_exit'
-  | 'force_enter';
+export type RoadPlacement = 'none' | 'start' | 'end' | 'both';
 
-export interface RotationRulesMap {
-  // Key format: "YYYY-MM" (1-indexed month, e.g. "2028-09")
-  [yearMonth: string]: RotationRuleType;
+export interface PerevakhtovkaRange {
+  id: string;
+  startDate: string; // YYYY-MM-DD
+  endDate: string;   // YYYY-MM-DD
+  road: RoadPlacement;
+  invertNextPhase: boolean;
+  title: string;
 }
 
-export interface RotationRuleOption {
-  type: RotationRuleType;
-  label: string;
-  shortLabel: string;
-  description: string;
+export interface MonthWorkConfig {
+  workStart: number; // 1..31 (0 = весь месяц отдых)
+  workEnd: number;   // 1..31
+  road: RoadPlacement;
+  dayShiftsCount?: number; // optional exact count of day shifts ('y'); undefined = auto half
+  cascadeAfter: boolean;   // if true, subsequent months rebuild from this month's ending phase
 }
 
-export const ROTATION_RULE_OPTIONS: RotationRuleOption[] = [
+export interface MonthConfigsMap {
+  // Key format: "YYYY-MM" (1-indexed month, e.g. "2028-02")
+  [yearMonth: string]: MonthWorkConfig;
+}
+
+export const ROAD_PLACEMENT_OPTIONS: { value: RoadPlacement; label: string; shortLabel: string }[] = [
+  { value: 'none', label: 'Без дня дороги (только Я и Н)', shortLabel: 'Без дороги' },
+  { value: 'end', label: 'Дорога в последний день (выезд)', shortLabel: 'Дорога в конце' },
+  { value: 'start', label: 'Дорога в первый день (заезд)', shortLabel: 'Дорога в начале' },
+  { value: 'both', label: 'Дорога в первый и последний день', shortLabel: 'Начало и конец' },
+];
+
+export const DEFAULT_PEREVAKHTOVKI: PerevakhtovkaRange[] = [
   {
-    type: 'short_exit',
-    label: 'Короткая вахта 1–14 (окно отпуска с 15-го)',
-    shortLabel: 'Перевахтовка 1–14',
-    description: '1–8 Я, 9–14 Н, с 15-го числа отдых (окно 15-го – 15-го следующего месяца), цикл сохраняется',
-  },
-  {
-    type: 'short_exit_flip',
-    label: 'Перевахтовка 1–14 со сменой фазы цикла',
-    shortLabel: 'Перевахтовка + сдвиг',
-    description: '1–8 Я, 9–14 Н, с 15-го отдых, а со следующего месяца вахты сдвигаются на другую половину',
-  },
-  {
-    type: 'force_enter',
-    label: 'Сдвиг фазы: отдых 1–15, заезд 16-го',
-    shortLabel: 'Сдвиг (заезд 16-го)',
-    description: '1–15 В, 16 Д, 17–23 Я, 24–конец Н; все последующие месяцы пересчитываются от этой фазы',
-  },
-  {
-    type: 'force_exit',
-    label: 'Сдвиг фазы: работа 1–17, отдых с 18-го',
-    shortLabel: 'Сдвиг (выезд 17-го)',
-    description: '1–8 Я, 9–16 Н, 17 Д, 18–конец В; все последующие месяцы пересчитываются от этой фазы',
+    id: 'pv-2028-sep',
+    startDate: '2028-09-01',
+    endDate: '2028-09-14',
+    road: 'none',
+    invertNextPhase: false,
+    title: 'Перевахтовка сентябрь 2028',
   },
 ];
 
-export const DEFAULT_ROTATION_RULES: RotationRulesMap = {
-  '2028-09': 'short_exit',
-};
+export const DEFAULT_MONTH_CONFIGS: MonthConfigsMap = {};
 
 export interface ShiftMeta {
   code: ShiftCode;
@@ -233,7 +228,7 @@ export const SHIFT_TYPES: Record<ShiftCode, ShiftMeta> = {
   },
 };
 
-// Эталонный график 2027 года (для Носар А.И.) — сохранён без изменений
+// Эталонный график 2027 года (для Носар А.И.)
 export const TEMPLATE_2027: Record<number, Record<number, ShiftCode>> = {
   0: {
     1: 'v', 2: 'v', 3: 'v', 4: 'v', 5: 'v', 6: 'v', 7: 'v', 8: 'v', 9: 'v', 10: 'v',
@@ -367,70 +362,196 @@ export function countDaysInclusive(startIso: string, endIso: string): number {
   return Math.round((endUtc - startUtc) / 86_400_000) + 1;
 }
 
+function addDaysIso(iso: string, delta: number): string {
+  const { year, month, day } = parseIsoDate(iso);
+  const dt = new Date(Date.UTC(year, month, day + delta));
+  return toIsoDate(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate());
+}
+
 /**
- * Generates standard days for a single month based on its rotational pattern:
- * - 'enter': 1-15 rest, 16 road, 17-23 day, 24-end night
- * - 'exit': 1-8 day, 9-16 night, 17 road, 18-end rest (Feb: 1-7 day, 8-14 night, 15 road, 16-end rest)
- * - 'short_exit': 1-8 day, 9-14 night, 15-end rest (matches Sept 2027 perevakhtovka)
+ * Generates shift codes for a contiguous work sequence of length `totalDays`.
  */
-function buildMonthDays(
+export function buildWorkSequence(
+  totalDays: number,
+  road: RoadPlacement,
+  customDayShiftsCount?: number
+): ShiftCode[] {
+  if (totalDays <= 0) return [];
+  const seq: ShiftCode[] = new Array(totalDays).fill('y');
+
+  const hasStartRoad = (road === 'start' || road === 'both') && totalDays >= 1;
+  const hasEndRoad = (road === 'end' || road === 'both') && totalDays >= (hasStartRoad ? 2 : 1);
+
+  let innerStart = 0;
+  let innerEnd = totalDays - 1;
+
+  if (hasStartRoad) {
+    seq[0] = 'd';
+    innerStart = 1;
+  }
+  if (hasEndRoad) {
+    seq[totalDays - 1] = 'd';
+    innerEnd = totalDays - 2;
+  }
+
+  const innerCount = Math.max(0, innerEnd - innerStart + 1);
+  const dayCount =
+    customDayShiftsCount !== undefined
+      ? Math.max(0, Math.min(innerCount, customDayShiftsCount))
+      : Math.ceil(innerCount / 2);
+
+  for (let i = 0; i < innerCount; i++) {
+    seq[innerStart + i] = i < dayCount ? 'y' : 'n';
+  }
+
+  return seq;
+}
+
+/**
+ * Builds days for a single month from a MonthWorkConfig.
+ */
+export function buildMonthDaysFromConfig(
   year: number,
   monthIndex: number,
-  mode: 'enter' | 'exit' | 'short_exit'
+  config: MonthWorkConfig
 ): Record<number, ShiftCode> {
   const daysInMonth = getDaysInMonth(year, monthIndex);
   const res: Record<number, ShiftCode> = {};
-
-  if (mode === 'enter') {
-    for (let d = 1; d <= daysInMonth; d++) {
-      if (d <= 15) res[d] = 'v';
-      else if (d === 16) res[d] = 'd';
-      else if (d <= 23) res[d] = 'y';
-      else res[d] = 'n';
-    }
-    return res;
-  }
-
-  if (mode === 'short_exit') {
-    for (let d = 1; d <= daysInMonth; d++) {
-      if (d <= 8) res[d] = 'y';
-      else if (d <= 14) res[d] = 'n';
-      else res[d] = 'v';
-    }
-    return res;
-  }
-
-  // Standard 'exit'
-  const isFeb = monthIndex === 1;
   for (let d = 1; d <= daysInMonth; d++) {
-    if (isFeb) {
-      if (d <= 7) res[d] = 'y';
-      else if (d <= 14) res[d] = 'n';
-      else if (d === 15) res[d] = 'd';
-      else res[d] = 'v';
-    } else {
-      if (d <= 8) res[d] = 'y';
-      else if (d <= 16) res[d] = 'n';
-      else if (d === 17) res[d] = 'd';
-      else res[d] = 'v';
-    }
+    res[d] = 'v';
   }
+
+  if (config.workStart <= 0 || config.workEnd < config.workStart) {
+    return res;
+  }
+
+  const start = Math.max(1, Math.min(daysInMonth, config.workStart));
+  const end = Math.max(start, Math.min(daysInMonth, config.workEnd));
+  const seq = buildWorkSequence(end - start + 1, config.road, config.dayShiftsCount);
+
+  for (let i = 0; i < seq.length; i++) {
+    res[start + i] = seq[i];
+  }
+
   return res;
 }
 
+/**
+ * Builds standard days for a single month in the automatic 30/30 rotational cycle.
+ * Accounts for shorter February automatically (28/29 days).
+ */
+function buildStandardMonthDays(
+  year: number,
+  monthIndex: number,
+  phase: MonthHalfPhase
+): Record<number, ShiftCode> {
+  const daysInMonth = getDaysInMonth(year, monthIndex);
+  const isFeb = monthIndex === 1;
+
+  if (phase === 'enter') {
+    const start = isFeb ? 15 : 16;
+    const totalWork = daysInMonth - start + 1;
+    const inner = totalWork - 1; // minus start road
+    const dayShifts = isFeb ? Math.floor(inner / 2) : 7;
+    return buildMonthDaysFromConfig(year, monthIndex, {
+      workStart: start,
+      workEnd: daysInMonth,
+      road: 'start',
+      dayShiftsCount: dayShifts,
+      cascadeAfter: false,
+    });
+  }
+
+  // phase === 'exit'
+  if (isFeb) {
+    return buildMonthDaysFromConfig(year, monthIndex, {
+      workStart: 1,
+      workEnd: 15,
+      road: 'end',
+      dayShiftsCount: 7,
+      cascadeAfter: false,
+    });
+  }
+
+  return buildMonthDaysFromConfig(year, monthIndex, {
+    workStart: 1,
+    workEnd: 17,
+    road: 'end',
+    dayShiftsCount: 8,
+    cascadeAfter: false,
+  });
+}
+
 export interface ComputedMonthPattern {
-  mode: 'enter' | 'exit' | 'short_exit' | 'template_2027';
+  source: 'template_2027' | 'auto' | 'perevakhtovka' | 'custom';
   hasPerevakhtovka: boolean;
-  ruleLabel: string | null;
+  isCustomMonth: boolean;
+  badgeText: string | null;
+  workRangeLabel: string;
+  inferredConfig: MonthWorkConfig;
   days: Record<number, ShiftCode>;
 }
 
+function inferMonthConfig(
+  year: number,
+  monthIndex: number,
+  days: Record<number, ShiftCode>
+): { config: MonthWorkConfig; rangeLabel: string } {
+  const daysInMonth = getDaysInMonth(year, monthIndex);
+  let firstWork = 0;
+  let lastWork = 0;
+  let dayShifts = 0;
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const c = days[d];
+    if (c === 'y' || c === 'n' || c === 'd') {
+      if (firstWork === 0) firstWork = d;
+      lastWork = d;
+      if (c === 'y') dayShifts++;
+    }
+  }
+
+  if (firstWork === 0) {
+    return {
+      config: { workStart: 0, workEnd: 0, road: 'none', cascadeAfter: false },
+      rangeLabel: 'Весь месяц отдых',
+    };
+  }
+
+  const startIsRoad = days[firstWork] === 'd';
+  const endIsRoad = lastWork > firstWork && days[lastWork] === 'd';
+  const road: RoadPlacement =
+    startIsRoad && endIsRoad
+      ? 'both'
+      : startIsRoad
+      ? 'start'
+      : endIsRoad
+      ? 'end'
+      : 'none';
+
+  return {
+    config: {
+      workStart: firstWork,
+      workEnd: lastWork,
+      road,
+      dayShiftsCount: dayShifts,
+      cascadeAfter: false,
+    },
+    rangeLabel: `${firstWork}–${lastWork}`,
+  };
+}
+
 /**
- * Computes continuous 2027–2030 base schedules with exact Dec→Jan continuity
- * and user-configured перевахтовки (phase flips / short vacation exits).
+ * Computes the complete continuous 2027–2030 base schedule:
+ * - 2027 follows TEMPLATE_2027 (unless overridden by a custom month config or перевахтовка)
+ * - 2028–2030 continue seamlessly from Dec 2027 with automatic February handling
+ * - Date-range перевахтовки paint exact shift spans (even across month boundaries!)
+ *   and automatically rebuild every following month's phase!
+ * - Per-month work day configs let the user fine-tune any month (e.g. February) directly.
  */
 export function buildMultiYearBaseSchedule(
-  rotationRules: RotationRulesMap = DEFAULT_ROTATION_RULES
+  perevakhtovki: PerevakhtovkaRange[] = DEFAULT_PEREVAKHTOVKI,
+  monthConfigs: MonthConfigsMap = DEFAULT_MONTH_CONFIGS
 ): Record<number, Record<number, ComputedMonthPattern>> {
   const allYears: Record<number, Record<number, ComputedMonthPattern>> = {
     2027: {},
@@ -439,66 +560,131 @@ export function buildMultiYearBaseSchedule(
     2030: {},
   };
 
-  // 2027: exact ground-truth schedule from user's file
-  for (let m = 0; m < 12; m++) {
-    const days: Record<number, ShiftCode> = {};
-    const daysCount = getDaysInMonth(2027, m);
-    for (let d = 1; d <= daysCount; d++) {
-      days[d] = TEMPLATE_2027[m]?.[d] ?? 'v';
+  // Pre-build a date lookup for all перевахтовки
+  const pvDayMap: Record<string, { code: ShiftCode; pv: PerevakhtovkaRange }> = {};
+  const pvAffectedMonths = new Set<string>();
+  const pvEndingInMonth: Record<string, PerevakhtovkaRange> = {};
+
+  const sortedPvs = [...perevakhtovki].sort((a, b) => a.startDate.localeCompare(b.startDate));
+  for (const pv of sortedPvs) {
+    const totalDays = countDaysInclusive(pv.startDate, pv.endDate);
+    if (totalDays <= 0) continue;
+    const seq = buildWorkSequence(totalDays, pv.road);
+    for (let i = 0; i < totalDays; i++) {
+      const iso = addDaysIso(pv.startDate, i);
+      const { year, month } = parseIsoDate(iso);
+      if (year < 2027 || year > 2030) continue;
+      pvDayMap[iso] = { code: seq[i], pv };
+      pvAffectedMonths.add(toYearMonthKey(year, month));
     }
-    allYears[2027][m] = {
-      mode: 'template_2027',
-      hasPerevakhtovka: m === 8, // Sept 2027 had 1–14 short shift for vacation
-      ruleLabel: m === 8 ? 'Перевахтовка 1–14' : null,
-      days,
-    };
+    const endParsed = parseIsoDate(pv.endDate);
+    if (endParsed.year >= 2027 && endParsed.year <= 2030) {
+      pvEndingInMonth[toYearMonthKey(endParsed.year, endParsed.month)] = pv;
+    }
   }
 
-  // December 2027 ends ON SHIFT (16–31 work = 'enter'), so Jan 2028 seamlessly begins with 'exit'!
   let nextExpectedPhase: MonthHalfPhase = 'exit';
 
-  for (const year of [2028, 2029, 2030] as const) {
+  for (const year of YEARS) {
     for (let m = 0; m < 12; m++) {
       const ymKey = toYearMonthKey(year, m);
-      const rule = rotationRules[ymKey];
+      const daysInMonth = getDaysInMonth(year, m);
+      const customConfig = monthConfigs[ymKey];
+      const hasPvInMonth = pvAffectedMonths.has(ymKey);
 
-      let mode: 'enter' | 'exit' | 'short_exit' = nextExpectedPhase;
+      let days: Record<number, ShiftCode> = {};
+      let source: ComputedMonthPattern['source'] = 'auto';
       let hasPerevakhtovka = false;
-      let ruleLabel: string | null = null;
+      let isCustomMonth = false;
+      let badgeText: string | null = null;
 
-      if (rule === 'short_exit') {
-        mode = 'short_exit';
+      if (hasPvInMonth) {
+        // Fill month with rest, then paint exact перевахтовка days
+        for (let d = 1; d <= daysInMonth; d++) {
+          const iso = toIsoDate(year, m, d);
+          days[d] = pvDayMap[iso]?.code ?? 'v';
+        }
+        source = 'perevakhtovka';
         hasPerevakhtovka = true;
-        ruleLabel = 'Перевахтовка 1–14';
-        // After short_exit (rest from 15th), next month starts with 1–15 rest -> 'enter'
-        nextExpectedPhase = 'enter';
-      } else if (rule === 'short_exit_flip') {
-        mode = 'short_exit';
-        hasPerevakhtovka = true;
-        ruleLabel = 'Перевахтовка + сдвиг';
-        // Phase flip: next month jumps straight to 'exit' (1st half work)
-        nextExpectedPhase = 'exit';
-      } else if (rule === 'force_enter') {
-        mode = 'enter';
-        hasPerevakhtovka = true;
-        ruleLabel = 'Сдвиг (заезд 16-го)';
-        nextExpectedPhase = 'exit';
-      } else if (rule === 'force_exit') {
-        mode = 'exit';
-        hasPerevakhtovka = true;
-        ruleLabel = 'Сдвиг (выезд 17-го)';
-        nextExpectedPhase = 'enter';
+
+        // Determine range label for badge
+        const { rangeLabel } = inferMonthConfig(year, m, days);
+        badgeText = `Перевахтовка ${rangeLabel}`;
+
+        // Rebuild next month phase if a перевахтовка ends in this month
+        const endingPv = pvEndingInMonth[ymKey];
+        if (endingPv) {
+          const endDay = parseIsoDate(endingPv.endDate).day;
+          const naturalNext: MonthHalfPhase = endDay <= 18 ? 'enter' : 'exit';
+          nextExpectedPhase = endingPv.invertNextPhase
+            ? naturalNext === 'enter'
+              ? 'exit'
+              : 'enter'
+            : naturalNext;
+        } else {
+          // Перевахтовка continues into next month
+          nextExpectedPhase = 'exit';
+        }
+      } else if (customConfig) {
+        days = buildMonthDaysFromConfig(year, m, customConfig);
+        source = 'custom';
+        isCustomMonth = true;
+        badgeText =
+          customConfig.workStart > 0
+            ? `Свои дни ${customConfig.workStart}–${customConfig.workEnd}`
+            : 'Весь месяц отдых';
+
+        if (customConfig.cascadeAfter) {
+          if (customConfig.workStart <= 0) {
+            nextExpectedPhase = 'enter';
+          } else {
+            nextExpectedPhase =
+              customConfig.workEnd >= daysInMonth - 3 ? 'exit' : 'enter';
+          }
+        } else if (year >= 2028) {
+          nextExpectedPhase = nextExpectedPhase === 'enter' ? 'exit' : 'enter';
+        }
+      } else if (year === 2027) {
+        for (let d = 1; d <= daysInMonth; d++) {
+          days[d] = TEMPLATE_2027[m]?.[d] ?? 'v';
+        }
+        source = 'template_2027';
+        if (m === 8) {
+          hasPerevakhtovka = true;
+          badgeText = 'Перевахтовка 1–14';
+        }
+        if (m === 11) {
+          const lastDayCode = days[daysInMonth];
+          nextExpectedPhase =
+            lastDayCode === 'y' || lastDayCode === 'n' || lastDayCode === 'd'
+              ? 'exit'
+              : 'enter';
+        }
       } else {
-        // Standard seamless 30/30 alternation
-        mode = nextExpectedPhase;
-        nextExpectedPhase = mode === 'enter' ? 'exit' : 'enter';
+        days = buildStandardMonthDays(year, m, nextExpectedPhase);
+        source = 'auto';
+        nextExpectedPhase = nextExpectedPhase === 'enter' ? 'exit' : 'enter';
       }
 
+      // If user edited Dec 2027 manually, reflect its ending phase into Jan 2028
+      if (year === 2027 && m === 11 && (customConfig || hasPvInMonth)) {
+        const lastDayCode = days[daysInMonth];
+        nextExpectedPhase =
+          lastDayCode === 'y' || lastDayCode === 'n' || lastDayCode === 'd'
+            ? 'exit'
+            : 'enter';
+      }
+
+      const { config: inferredConfig, rangeLabel } = inferMonthConfig(year, m, days);
+
       allYears[year][m] = {
-        mode,
+        source,
         hasPerevakhtovka,
-        ruleLabel,
-        days: buildMonthDays(year, m, mode),
+        isCustomMonth,
+        badgeText,
+        workRangeLabel: rangeLabel,
+        inferredConfig: customConfig ?? inferredConfig,
+        days,
       };
     }
   }
@@ -515,20 +701,44 @@ export function isDateInVacations(iso: string, vacations: VacationRange[]): bool
   return false;
 }
 
+/**
+ * Checks how many days of a vacation fall on working shifts vs resting вахта ('v').
+ */
+export function getVacationWorkOverlapDays(
+  vac: VacationRange,
+  baseSchedule: Record<number, Record<number, ComputedMonthPattern>>
+): { totalDays: number; workOverlapDays: number; restDays: number } {
+  const totalDays = countDaysInclusive(vac.startDate, vac.endDate);
+  let workOverlapDays = 0;
+
+  for (let i = 0; i < totalDays; i++) {
+    const iso = addDaysIso(vac.startDate, i);
+    const { year, month, day } = parseIsoDate(iso);
+    const code = baseSchedule[year]?.[month]?.days[day] ?? 'v';
+    if (SHIFT_TYPES[code].isWork) {
+      workOverlapDays++;
+    }
+  }
+
+  return {
+    totalDays,
+    workOverlapDays,
+    restDays: totalDays - workOverlapDays,
+  };
+}
+
 export function getBaseShift(
   year: number,
   monthIndex: number,
   day: number,
   vacations: VacationRange[],
-  rotationRules: RotationRulesMap = DEFAULT_ROTATION_RULES,
-  precomputedBase?: Record<number, Record<number, ComputedMonthPattern>>
+  precomputedBase: Record<number, Record<number, ComputedMonthPattern>>
 ): ShiftCode {
   const iso = toIsoDate(year, monthIndex, day);
   if (isDateInVacations(iso, vacations)) {
     return 'o';
   }
-  const base = precomputedBase ?? buildMultiYearBaseSchedule(rotationRules);
-  return base[year]?.[monthIndex]?.days[day] ?? 'v';
+  return precomputedBase[year]?.[monthIndex]?.days[day] ?? 'v';
 }
 
 export function getEffectiveShift(
@@ -537,30 +747,27 @@ export function getEffectiveShift(
   day: number,
   vacations: VacationRange[],
   overrides: DayOverrideMap,
-  rotationRules: RotationRulesMap = DEFAULT_ROTATION_RULES,
-  precomputedBase?: Record<number, Record<number, ComputedMonthPattern>>
+  precomputedBase: Record<number, Record<number, ComputedMonthPattern>>
 ): ShiftCode {
   const iso = toIsoDate(year, monthIndex, day);
   if (overrides[iso]) {
     return overrides[iso];
   }
-  return getBaseShift(year, monthIndex, day, vacations, rotationRules, precomputedBase);
+  return getBaseShift(year, monthIndex, day, vacations, precomputedBase);
 }
 
 export function getYearSchedule(
   year: number,
   vacations: VacationRange[],
   overrides: DayOverrideMap,
-  rotationRules: RotationRulesMap = DEFAULT_ROTATION_RULES,
-  precomputedBase?: Record<number, Record<number, ComputedMonthPattern>>
+  precomputedBase: Record<number, Record<number, ComputedMonthPattern>>
 ): Record<number, Record<number, ShiftCode>> {
-  const base = precomputedBase ?? buildMultiYearBaseSchedule(rotationRules);
   const schedule: Record<number, Record<number, ShiftCode>> = {};
   for (let m = 0; m < 12; m++) {
     schedule[m] = {};
     const daysCount = getDaysInMonth(year, m);
     for (let d = 1; d <= daysCount; d++) {
-      schedule[m][d] = getEffectiveShift(year, m, d, vacations, overrides, rotationRules, base);
+      schedule[m][d] = getEffectiveShift(year, m, d, vacations, overrides, precomputedBase);
     }
   }
   return schedule;
@@ -570,10 +777,8 @@ export function getYearStats(
   year: number,
   vacations: VacationRange[],
   overrides: DayOverrideMap,
-  rotationRules: RotationRulesMap = DEFAULT_ROTATION_RULES,
-  precomputedBase?: Record<number, Record<number, ComputedMonthPattern>>
+  precomputedBase: Record<number, Record<number, ComputedMonthPattern>>
 ): YearStats {
-  const base = precomputedBase ?? buildMultiYearBaseSchedule(rotationRules);
   const counts: Record<ShiftCode, number> = { v: 0, d: 0, y: 0, n: 0, o: 0 };
   let totalHours = 0;
   let workDays = 0;
@@ -582,7 +787,7 @@ export function getYearStats(
   for (let m = 0; m < 12; m++) {
     const daysCount = getDaysInMonth(year, m);
     for (let d = 1; d <= daysCount; d++) {
-      const code = getEffectiveShift(year, m, d, vacations, overrides, rotationRules, base);
+      const code = getEffectiveShift(year, m, d, vacations, overrides, precomputedBase);
       counts[code]++;
       totalHours += SHIFT_TYPES[code].hours;
       if (SHIFT_TYPES[code].isWork) workDays++;
@@ -597,10 +802,8 @@ export function getMonthlyBreakdown(
   year: number,
   vacations: VacationRange[],
   overrides: DayOverrideMap,
-  rotationRules: RotationRulesMap = DEFAULT_ROTATION_RULES,
-  precomputedBase?: Record<number, Record<number, ComputedMonthPattern>>
+  precomputedBase: Record<number, Record<number, ComputedMonthPattern>>
 ): MonthStats[] {
-  const base = precomputedBase ?? buildMultiYearBaseSchedule(rotationRules);
   const result: MonthStats[] = [];
 
   for (let m = 0; m < 12; m++) {
@@ -610,7 +813,7 @@ export function getMonthlyBreakdown(
     const daysInMonth = getDaysInMonth(year, m);
 
     for (let d = 1; d <= daysInMonth; d++) {
-      const code = getEffectiveShift(year, m, d, vacations, overrides, rotationRules, base);
+      const code = getEffectiveShift(year, m, d, vacations, overrides, precomputedBase);
       counts[code]++;
       totalHours += SHIFT_TYPES[code].hours;
       if (SHIFT_TYPES[code].isWork) workDays++;
@@ -639,10 +842,8 @@ export function getYearRotationBlocks(
   year: number,
   vacations: VacationRange[],
   overrides: DayOverrideMap,
-  rotationRules: RotationRulesMap = DEFAULT_ROTATION_RULES,
-  precomputedBase?: Record<number, Record<number, ComputedMonthPattern>>
+  precomputedBase: Record<number, Record<number, ComputedMonthPattern>>
 ): RotationBlock[] {
-  const base = precomputedBase ?? buildMultiYearBaseSchedule(rotationRules);
   const blocks: RotationBlock[] = [];
   let current: RotationBlock | null = null;
   let workCounter = 0;
@@ -653,7 +854,7 @@ export function getYearRotationBlocks(
     const daysCount = getDaysInMonth(year, m);
     for (let d = 1; d <= daysCount; d++) {
       const iso = toIsoDate(year, m, d);
-      const code = getEffectiveShift(year, m, d, vacations, overrides, rotationRules, base);
+      const code = getEffectiveShift(year, m, d, vacations, overrides, precomputedBase);
       const category = shiftToCategory(code);
 
       if (!current || current.category !== category) {
@@ -705,11 +906,9 @@ export function getDayBlockContext(
   day: number,
   vacations: VacationRange[],
   overrides: DayOverrideMap,
-  rotationRules: RotationRulesMap = DEFAULT_ROTATION_RULES,
-  precomputedBase?: Record<number, Record<number, ComputedMonthPattern>>
+  precomputedBase: Record<number, Record<number, ComputedMonthPattern>>
 ): DayBlockContext {
-  const base = precomputedBase ?? buildMultiYearBaseSchedule(rotationRules);
-  const targetCode = getEffectiveShift(year, monthIndex, day, vacations, overrides, rotationRules, base);
+  const targetCode = getEffectiveShift(year, monthIndex, day, vacations, overrides, precomputedBase);
   const category = shiftToCategory(targetCode);
 
   let start = { year, month: monthIndex, day };
@@ -717,7 +916,7 @@ export function getDayBlockContext(
   for (let step = 1; step <= 60; step++) {
     const prev = addDaysUtc(year, monthIndex, day, -step);
     if (prev.year < 2027 || prev.year > 2030) break;
-    const prevCode = getEffectiveShift(prev.year, prev.month, prev.day, vacations, overrides, rotationRules, base);
+    const prevCode = getEffectiveShift(prev.year, prev.month, prev.day, vacations, overrides, precomputedBase);
     if (shiftToCategory(prevCode) !== category) break;
     start = prev;
     beforeCount++;
@@ -728,7 +927,7 @@ export function getDayBlockContext(
   for (let step = 1; step <= 60; step++) {
     const next = addDaysUtc(year, monthIndex, day, step);
     if (next.year < 2027 || next.year > 2030) break;
-    const nextCode = getEffectiveShift(next.year, next.month, next.day, vacations, overrides, rotationRules, base);
+    const nextCode = getEffectiveShift(next.year, next.month, next.day, vacations, overrides, precomputedBase);
     if (shiftToCategory(nextCode) !== category) break;
     end = next;
     afterCount++;
@@ -738,7 +937,7 @@ export function getDayBlockContext(
   let blockHours = 0;
   for (let i = 0; i < totalDaysInBlock; i++) {
     const cur = addDaysUtc(start.year, start.month, start.day, i);
-    const code = getEffectiveShift(cur.year, cur.month, cur.day, vacations, overrides, rotationRules, base);
+    const code = getEffectiveShift(cur.year, cur.month, cur.day, vacations, overrides, precomputedBase);
     blockHours += SHIFT_TYPES[code].hours;
   }
 

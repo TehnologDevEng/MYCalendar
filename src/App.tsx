@@ -12,15 +12,17 @@ import {
   X,
 } from 'lucide-react';
 import {
-  DEFAULT_ROTATION_RULES,
+  DEFAULT_MONTH_CONFIGS,
+  DEFAULT_PEREVAKHTOVKI,
   DEFAULT_VACATIONS,
   DayNotesMap,
   DayOverrideMap,
   MONTHS,
   MONTHS_SHORT,
+  MonthConfigsMap,
+  MonthWorkConfig,
   OWNER_INFO,
-  RotationRuleType,
-  RotationRulesMap,
+  PerevakhtovkaRange,
   SHIFT_ORDER,
   SHIFT_TYPES,
   ScheduleYear,
@@ -40,6 +42,7 @@ import {
   parseIsoDate,
   pluralizeDays,
   toIsoDate,
+  toYearMonthKey,
 } from './data/scheduleData';
 import { SHIFT_STYLES } from './data/shiftStyles';
 import { YearCalendarView } from './components/YearCalendarView';
@@ -48,13 +51,15 @@ import { VacationsAndEditsView } from './components/VacationsAndEditsView';
 import { SummaryTableView } from './components/SummaryTableView';
 import { DayDetailModal } from './components/DayDetailModal';
 import { ExportModal } from './components/ExportModal';
+import { MonthConfigModal } from './components/MonthConfigModal';
 import { buildMonthlyCsv, triggerFileDownload } from './utils/exportUtils';
 
 type ActiveTab = 'calendar' | 'rotations' | 'vacations' | 'summary';
 
 const STORAGE_KEYS = {
   vacations: 'vakhta_nosar_vacations_v1',
-  rotationRules: 'vakhta_nosar_rotation_rules_v1',
+  perevakhtovki: 'vakhta_nosar_perevakhtovki_v2',
+  monthConfigs: 'vakhta_nosar_month_configs_v2',
   overrides: 'vakhta_nosar_overrides_v1',
   notes: 'vakhta_nosar_notes_v1',
   showCodes: 'vakhta_nosar_show_codes_v1',
@@ -94,8 +99,11 @@ export default function App() {
   const [vacations, setVacations] = useState<VacationRange[]>(() =>
     loadJson<VacationRange[]>(STORAGE_KEYS.vacations, DEFAULT_VACATIONS)
   );
-  const [rotationRules, setRotationRules] = useState<RotationRulesMap>(() =>
-    loadJson<RotationRulesMap>(STORAGE_KEYS.rotationRules, DEFAULT_ROTATION_RULES)
+  const [perevakhtovki, setPerevakhtovki] = useState<PerevakhtovkaRange[]>(() =>
+    loadJson<PerevakhtovkaRange[]>(STORAGE_KEYS.perevakhtovki, DEFAULT_PEREVAKHTOVKI)
+  );
+  const [monthConfigs, setMonthConfigs] = useState<MonthConfigsMap>(() =>
+    loadJson<MonthConfigsMap>(STORAGE_KEYS.monthConfigs, DEFAULT_MONTH_CONFIGS)
   );
   const [overrides, setOverrides] = useState<DayOverrideMap>(() =>
     loadJson<DayOverrideMap>(STORAGE_KEYS.overrides, {})
@@ -105,6 +113,7 @@ export default function App() {
   );
 
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [editingMonthIndex, setEditingMonthIndex] = useState<number | null>(null);
   const [highlightedMonth, setHighlightedMonth] = useState<number | null>(null);
   const [lookupDate, setLookupDate] = useState<string>('2028-09-15');
   const [exportOpen, setExportOpen] = useState(false);
@@ -114,8 +123,12 @@ export default function App() {
   }, [vacations]);
 
   useEffect(() => {
-    saveJson(STORAGE_KEYS.rotationRules, rotationRules);
-  }, [rotationRules]);
+    saveJson(STORAGE_KEYS.perevakhtovki, perevakhtovki);
+  }, [perevakhtovki]);
+
+  useEffect(() => {
+    saveJson(STORAGE_KEYS.monthConfigs, monthConfigs);
+  }, [monthConfigs]);
 
   useEffect(() => {
     saveJson(STORAGE_KEYS.overrides, overrides);
@@ -134,28 +147,28 @@ export default function App() {
   }, [isSidebarCollapsed]);
 
   const baseSchedule = useMemo(
-    () => buildMultiYearBaseSchedule(rotationRules),
-    [rotationRules]
+    () => buildMultiYearBaseSchedule(perevakhtovki, monthConfigs),
+    [perevakhtovki, monthConfigs]
   );
 
   const scheduleByMonth = useMemo(
-    () => getYearSchedule(year, vacations, overrides, rotationRules, baseSchedule),
-    [year, vacations, overrides, rotationRules, baseSchedule]
+    () => getYearSchedule(year, vacations, overrides, baseSchedule),
+    [year, vacations, overrides, baseSchedule]
   );
 
   const stats = useMemo(
-    () => getYearStats(year, vacations, overrides, rotationRules, baseSchedule),
-    [year, vacations, overrides, rotationRules, baseSchedule]
+    () => getYearStats(year, vacations, overrides, baseSchedule),
+    [year, vacations, overrides, baseSchedule]
   );
 
   const monthlyBreakdown = useMemo(
-    () => getMonthlyBreakdown(year, vacations, overrides, rotationRules, baseSchedule),
-    [year, vacations, overrides, rotationRules, baseSchedule]
+    () => getMonthlyBreakdown(year, vacations, overrides, baseSchedule),
+    [year, vacations, overrides, baseSchedule]
   );
 
   const rotationBlocks = useMemo(
-    () => getYearRotationBlocks(year, vacations, overrides, rotationRules, baseSchedule),
-    [year, vacations, overrides, rotationRules, baseSchedule]
+    () => getYearRotationBlocks(year, vacations, overrides, baseSchedule),
+    [year, vacations, overrides, baseSchedule]
   );
 
   const yearVacations = useMemo(() => {
@@ -166,12 +179,12 @@ export default function App() {
       .sort((a, b) => a.startDate.localeCompare(b.startDate));
   }, [year, vacations]);
 
-  const yearPerevakhtovki = useMemo(() => {
+  const yearHighlights = useMemo(() => {
     const patterns = baseSchedule[year] ?? {};
-    const list: { monthIndex: number; label: string }[] = [];
+    const list: string[] = [];
     for (let m = 0; m < 12; m++) {
-      if (patterns[m]?.hasPerevakhtovka && patterns[m]?.ruleLabel) {
-        list.push({ monthIndex: m, label: `${MONTHS[m]} (${patterns[m].ruleLabel})` });
+      if (patterns[m]?.badgeText) {
+        list.push(`${MONTHS[m]}: ${patterns[m].badgeText}`);
       }
     }
     return list;
@@ -183,34 +196,18 @@ export default function App() {
       return null;
     }
     const { year: ly, month: lm, day: ld } = parseIsoDate(lookupDate);
-    const code = getEffectiveShift(ly, lm, ld, vacations, overrides, rotationRules, baseSchedule);
-    const block = getDayBlockContext(ly, lm, ld, vacations, overrides, rotationRules, baseSchedule);
+    const code = getEffectiveShift(ly, lm, ld, vacations, overrides, baseSchedule);
+    const block = getDayBlockContext(ly, lm, ld, vacations, overrides, baseSchedule);
     return { code, meta: SHIFT_TYPES[code], block, year: ly, month: lm, day: ld };
-  }, [lookupDate, vacations, overrides, rotationRules, baseSchedule]);
+  }, [lookupDate, vacations, overrides, baseSchedule]);
 
   // Selected day modal details
   const selectedDayInfo = useMemo(() => {
     if (!selectedDate) return null;
     const { year: sy, month: sm, day: sd } = parseIsoDate(selectedDate);
-    const effectiveCode = getEffectiveShift(
-      sy,
-      sm,
-      sd,
-      vacations,
-      overrides,
-      rotationRules,
-      baseSchedule
-    );
-    const baseCode = getBaseShift(sy, sm, sd, vacations, rotationRules, baseSchedule);
-    const blockContext = getDayBlockContext(
-      sy,
-      sm,
-      sd,
-      vacations,
-      overrides,
-      rotationRules,
-      baseSchedule
-    );
+    const effectiveCode = getEffectiveShift(sy, sm, sd, vacations, overrides, baseSchedule);
+    const baseCode = getBaseShift(sy, sm, sd, vacations, baseSchedule);
+    const blockContext = getDayBlockContext(sy, sm, sd, vacations, overrides, baseSchedule);
     return {
       isoDate: selectedDate,
       effectiveCode,
@@ -219,7 +216,7 @@ export default function App() {
       blockContext,
       note: notes[selectedDate] ?? '',
     };
-  }, [selectedDate, vacations, overrides, notes, rotationRules, baseSchedule]);
+  }, [selectedDate, vacations, overrides, notes, baseSchedule]);
 
   const handleJumpToDate = (isoDate: string) => {
     const { year: targetYear, month: targetMonth } = parseIsoDate(isoDate);
@@ -281,20 +278,29 @@ export default function App() {
   };
 
   const handleAddVacation = (vac: Omit<VacationRange, 'id'>) => {
-    const id = `vac-${Date.now()}`;
-    setVacations((prev) => [...prev, { ...vac, id }]);
+    setVacations((prev) => [...prev, { ...vac, id: `vac-${Date.now()}` }]);
   };
 
   const handleDeleteVacation = (id: string) => {
     setVacations((prev) => prev.filter((v) => v.id !== id));
   };
 
-  const handleSetRotationRule = (ymKey: string, rule: RotationRuleType) => {
-    setRotationRules((prev) => ({ ...prev, [ymKey]: rule }));
+  const handleAddPerevakhtovka = (pv: Omit<PerevakhtovkaRange, 'id'>) => {
+    setPerevakhtovki((prev) => [...prev, { ...pv, id: `pv-${Date.now()}` }]);
   };
 
-  const handleDeleteRotationRule = (ymKey: string) => {
-    setRotationRules((prev) => {
+  const handleDeletePerevakhtovka = (id: string) => {
+    setPerevakhtovki((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  const handleSaveMonthConfig = (monthIndex: number, config: MonthWorkConfig) => {
+    const ymKey = toYearMonthKey(year, monthIndex);
+    setMonthConfigs((prev) => ({ ...prev, [ymKey]: config }));
+  };
+
+  const handleResetMonthConfig = (monthIndex: number) => {
+    const ymKey = toYearMonthKey(year, monthIndex);
+    setMonthConfigs((prev) => {
       const copy = { ...prev };
       delete copy[ymKey];
       return copy;
@@ -302,12 +308,12 @@ export default function App() {
   };
 
   const handleDownloadMonthlyCsv = () => {
-    const csv = buildMonthlyCsv(year, vacations, overrides, rotationRules);
+    const csv = buildMonthlyCsv(year, vacations, overrides, baseSchedule);
     triggerFileDownload(csv, `vakhta_svodka_${year}.csv`, 'text/csv;charset=utf-8');
   };
 
   const overridesCount = Object.keys(overrides).length;
-  const rulesCount = Object.keys(rotationRules).length;
+  const customMonthsCount = Object.keys(monthConfigs).length;
   const notesCount = Object.values(notes).filter((v) => v.trim().length > 0).length;
 
   const navItems: {
@@ -322,9 +328,9 @@ export default function App() {
     {
       id: 'vacations',
       label: 'Перевахтовки и отпуска',
-      shortLabel: 'Отпуска',
+      shortLabel: 'График',
       icon: CalendarRange,
-      count: vacations.length + rulesCount + overridesCount,
+      count: perevakhtovki.length + vacations.length + customMonthsCount + overridesCount,
     },
     { id: 'summary', label: 'Сводка 2027–2030', shortLabel: 'Сводка', icon: Table2 },
   ];
@@ -654,17 +660,17 @@ export default function App() {
                     ))}
                   </>
                 )}
-                {yearVacations.length > 0 && yearPerevakhtovki.length > 0 && ' · '}
-                {yearPerevakhtovki.length > 0 && (
+                {yearVacations.length > 0 && yearHighlights.length > 0 && ' · '}
+                {yearHighlights.length > 0 && (
                   <button
                     type="button"
                     onClick={() => setActiveTab('vacations')}
                     className="text-[#00BCC5] hover:underline cursor-pointer text-left"
                   >
-                    {yearPerevakhtovki.map((p) => p.label).join(', ')}
+                    {yearHighlights.join(' · ')}
                   </button>
                 )}
-                {yearVacations.length === 0 && yearPerevakhtovki.length === 0 && (
+                {yearVacations.length === 0 && yearHighlights.length === 0 && (
                   <>Непрерывный цикл 30/30 · {stats.totalDays} календарных дней</>
                 )}
               </p>
@@ -865,6 +871,7 @@ export default function App() {
               overrides={overrides}
               notes={notes}
               onSelectDay={(iso) => setSelectedDate(iso)}
+              onEditMonth={(mIdx) => setEditingMonthIndex(mIdx)}
             />
           )}
 
@@ -880,15 +887,19 @@ export default function App() {
             <VacationsAndEditsView
               year={year}
               vacations={vacations}
-              rotationRules={rotationRules}
+              perevakhtovki={perevakhtovki}
+              monthConfigs={monthConfigs}
+              baseSchedule={baseSchedule}
               overrides={overrides}
               notes={notes}
               onAddVacation={handleAddVacation}
               onDeleteVacation={handleDeleteVacation}
               onResetVacations={() => setVacations(DEFAULT_VACATIONS)}
-              onSetRotationRule={handleSetRotationRule}
-              onDeleteRotationRule={handleDeleteRotationRule}
-              onResetRotationRules={() => setRotationRules(DEFAULT_ROTATION_RULES)}
+              onAddPerevakhtovka={handleAddPerevakhtovka}
+              onDeletePerevakhtovka={handleDeletePerevakhtovka}
+              onResetPerevakhtovki={() => setPerevakhtovki(DEFAULT_PEREVAKHTOVKI)}
+              onOpenMonthConfig={(mIdx) => setEditingMonthIndex(mIdx)}
+              onResetAllMonthConfigs={() => setMonthConfigs(DEFAULT_MONTH_CONFIGS)}
               onRemoveOverride={handleResetOverride}
               onClearAllOverrides={() => setOverrides({})}
               onDeleteNote={(iso) => handleSaveNote(iso, '')}
@@ -902,7 +913,6 @@ export default function App() {
               monthlyBreakdown={monthlyBreakdown}
               vacations={vacations}
               overrides={overrides}
-              rotationRules={rotationRules}
               baseSchedule={baseSchedule}
               onSelectYear={(y) => setYear(y)}
               onDownloadMonthlyCsv={handleDownloadMonthlyCsv}
@@ -946,6 +956,20 @@ export default function App() {
         </button>
       </nav>
 
+      {/* Per-Month Work Days Config Sheet */}
+      {editingMonthIndex !== null && (
+        <MonthConfigModal
+          year={year}
+          monthIndex={editingMonthIndex}
+          initialConfig={baseSchedule[year][editingMonthIndex].inferredConfig}
+          isCustom={Boolean(monthConfigs[toYearMonthKey(year, editingMonthIndex)])}
+          hasPerevakhtovka={baseSchedule[year][editingMonthIndex].hasPerevakhtovka}
+          onSave={(cfg) => handleSaveMonthConfig(editingMonthIndex, cfg)}
+          onReset={() => handleResetMonthConfig(editingMonthIndex)}
+          onClose={() => setEditingMonthIndex(null)}
+        />
+      )}
+
       {/* Day Inspector & Override Sheet */}
       {selectedDayInfo && (
         <DayDetailModal
@@ -970,7 +994,7 @@ export default function App() {
           vacations={vacations}
           overrides={overrides}
           notes={notes}
-          rotationRules={rotationRules}
+          baseSchedule={baseSchedule}
           onClose={() => setExportOpen(false)}
         />
       )}

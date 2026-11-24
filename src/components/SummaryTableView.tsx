@@ -4,7 +4,6 @@ import {
   ComputedMonthPattern,
   DayOverrideMap,
   MonthStats,
-  RotationRulesMap,
   ScheduleYear,
   VacationRange,
   YEARS,
@@ -16,7 +15,6 @@ interface SummaryTableViewProps {
   monthlyBreakdown: MonthStats[];
   vacations: VacationRange[];
   overrides: DayOverrideMap;
-  rotationRules: RotationRulesMap;
   baseSchedule: Record<number, Record<number, ComputedMonthPattern>>;
   onSelectYear: (y: ScheduleYear) => void;
   onDownloadMonthlyCsv: () => void;
@@ -27,7 +25,6 @@ export const SummaryTableView: React.FC<SummaryTableViewProps> = ({
   monthlyBreakdown,
   vacations,
   overrides,
-  rotationRules,
   baseSchedule,
   onSelectYear,
   onDownloadMonthlyCsv,
@@ -47,7 +44,7 @@ export const SummaryTableView: React.FC<SummaryTableViewProps> = ({
 
   const multiYearStats = YEARS.map((y) => ({
     year: y,
-    stats: getYearStats(y, vacations, overrides, rotationRules, baseSchedule),
+    stats: getYearStats(y, vacations, overrides, baseSchedule),
   }));
 
   const fourYearHours = multiYearStats.reduce((acc, item) => acc + item.stats.totalHours, 0);

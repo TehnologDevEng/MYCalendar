@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Calendar, Download, FileSpreadsheet, Printer, X } from 'lucide-react';
 import {
+  ComputedMonthPattern,
   DayNotesMap,
   DayOverrideMap,
-  RotationRulesMap,
   SHIFT_ORDER,
   SHIFT_TYPES,
   ShiftCode,
@@ -21,7 +21,7 @@ interface ExportModalProps {
   vacations: VacationRange[];
   overrides: DayOverrideMap;
   notes: DayNotesMap;
-  rotationRules: RotationRulesMap;
+  baseSchedule: Record<number, Record<number, ComputedMonthPattern>>;
   onClose: () => void;
 }
 
@@ -30,7 +30,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   vacations,
   overrides,
   notes,
-  rotationRules,
+  baseSchedule,
   onClose,
 }) => {
   const [includeTypes, setIncludeTypes] = useState<Record<ShiftCode, boolean>>({
@@ -63,7 +63,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       vacations,
       overrides,
       notes,
-      rotationRules,
+      baseSchedule,
     });
     triggerFileDownload(
       ics,
@@ -73,7 +73,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   };
 
   const handleDownloadMonthlyCsv = () => {
-    const csv = buildMonthlyCsv(year, vacations, overrides, rotationRules);
+    const csv = buildMonthlyCsv(year, vacations, overrides, baseSchedule);
     triggerFileDownload(
       csv,
       `vakhta_svodka_${year}.csv`,
@@ -82,7 +82,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   };
 
   const handleDownloadDailyCsv = () => {
-    const csv = buildDailyCsv(year, vacations, overrides, notes, rotationRules);
+    const csv = buildDailyCsv(year, vacations, overrides, notes, baseSchedule);
     triggerFileDownload(
       csv,
       `vakhta_dnevnik_${year}.csv`,
